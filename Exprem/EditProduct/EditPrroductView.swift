@@ -7,12 +7,12 @@
 
 import SwiftUI
 
-enum EditReminderFrequency: String, CaseIterable {
-    case daily = "Every Day"
-    case weekly = "Every Week"
-    case monthly = "Every Month"
-    case yearly = "Every Year"
-}
+//enum ReminderFrequency: String, CaseIterable {
+//    case daily = "Every Day"
+//    case weekly = "Every Week"
+//    case monthly = "Every Month"
+//    case yearly = "Every Year"
+//}
 
 struct EditPrroductView: View {
     @Environment(\.dismiss) private var dismiss
@@ -21,7 +21,7 @@ struct EditPrroductView: View {
     @State private var expiryDate: Date
     @State private var note = ""
     @State private var startDate = Date()
-    @State private var selectedFrequency: EditReminderFrequency = .weekly
+    @State private var selectedFrequency: ReminderFrequency = .weekly
 
     init(name: String, expiryDate: Date) {
         _name = State(initialValue: name)
@@ -32,17 +32,10 @@ struct EditPrroductView: View {
         List {
             Section {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(.white.opacity(0.75))
+                    Image(.dummy)
+                        .resizable()
+                        .scaledToFit()
                         .frame(height: 120)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(Color.gray.opacity(0.18), lineWidth: 0.8)
-                        }
-
-                    Text("Thumbnail")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -53,7 +46,7 @@ struct EditPrroductView: View {
 
                     Divider()
 
-                    DatePicker("Expiry Date", selection: $expiryDate, displayedComponents: .date)
+                    DatePicker("Expiry Date", selection: $expiryDate, displayedComponents: .date).tint(.blue)
                 }
                 .padding(.vertical, 2)
             } header: {
@@ -64,14 +57,14 @@ struct EditPrroductView: View {
                 DatePicker("Start Reminder", selection: $startDate, displayedComponents: .date)
 
                 Menu {
-                    ForEach(EditReminderFrequency.allCases, id: \.self) { frequency in
+                    ForEach(ReminderFrequency.allCases, id: \.self) { frequency in
                         Button(frequency.rawValue) {
                             selectedFrequency = frequency
                         }
                     }
                 } label: {
                     HStack {
-                        Text("Frequency")
+                        Text("Frequency").foregroundColor(.primary)
                         Spacer()
                         Text(selectedFrequency.rawValue)
                             .foregroundColor(.secondary)
@@ -83,22 +76,14 @@ struct EditPrroductView: View {
 
             Section {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(.white.opacity(0.75))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.gray.opacity(0.2), lineWidth: 0.8)
-                        }
-
                     TextField("Optional", text: $note)
-                        .padding(12)
                 }
             } header: {
                 Text("Note")
             }
         }
         .scrollContentBackground(.hidden)
-        .background(Color(red: 0.93, green: 0.93, blue: 0.95))
+//        .background(Color(red: 0.93, green: 0.93, blue: 0.95))
         .listSectionSpacing(14)
         .navigationTitle("Edit Product")
         .navigationBarTitleDisplayMode(.inline)
@@ -112,7 +97,7 @@ struct EditPrroductView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") {
                     dismiss()
-                }
+                }.buttonStyle(.borderedProminent).foregroundStyle(.white)
             }
         }
     }
