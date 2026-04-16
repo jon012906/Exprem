@@ -33,17 +33,10 @@ struct AddProductView: View {
             List {
                 Section {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(.white.opacity(0.75))
+                        Image(.dummy)
+                            .resizable()
+                            .scaledToFit()
                             .frame(height: 120)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                    .stroke(Color.gray.opacity(0.18), lineWidth: 0.8)
-                            }
-
-                        Text("Thumbnail")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -52,7 +45,8 @@ struct AddProductView: View {
                         HStack(spacing: 8) {
                             TextField("Product Name", text: $name)
                                 .font(.body)
-
+                            
+                            Spacer()
                             Button {
                                 showScanName = true
                             } label: {
@@ -66,7 +60,7 @@ struct AddProductView: View {
 
                         HStack(spacing: 8) {
                             DatePicker("Expiry Date", selection: $expiryDate, displayedComponents: .date)
-
+                            
                             Button {
                                 showScanExpiry = true
                             } label: {
@@ -85,12 +79,15 @@ struct AddProductView: View {
                 Section {
                     DatePicker("Start Reminder", selection: $startDate, displayedComponents: .date)
                     
-                    Button {
-                        showFrequencySheet = true
-                    }
-                    label: {
+                    Menu {
+                        ForEach(ReminderFrequency.allCases, id: \.self) { frequency in
+                            Button(frequency.rawValue) {
+                                selectedFrequency = frequency
+                            }
+                        }
+                    } label: {
                         HStack {
-                            Text("Frequency")
+                            Text("Frequency").foregroundColor(.primary)
                             Spacer()
                             Text(selectedFrequency.rawValue)
                                 .foregroundColor(.secondary)
@@ -103,15 +100,7 @@ struct AddProductView: View {
                 
                 Section {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.white.opacity(0.75))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.gray.opacity(0.2), lineWidth: 0.8)
-                            }
-
                         TextField("Optional", text: $note)
-                            .padding(12)
                     }
                 }
                 header: {
@@ -141,9 +130,6 @@ struct AddProductView: View {
                         
                 }
             }
-            .sheet(isPresented: $showFrequencySheet) {
-                FrequencyPickerView(selected: $selectedFrequency)
-            }
             .navigationDestination(isPresented: $showScanName) {
                 ScanProductNameView(origin: .addProduct)
             }
@@ -161,5 +147,4 @@ struct AddProductView: View {
     NavigationStack {
         AddProductView()
     }
-//    AddProductView()
 }
