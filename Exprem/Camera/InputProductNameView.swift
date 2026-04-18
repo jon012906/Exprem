@@ -1,17 +1,22 @@
+//
+//  InputProductNameView.swift
+//  Exprem
+//
+//  Created by Jon on 12/04/26.
+//
+
 import SwiftUI
 
 struct InputProductNameView: View {
     let origin: ScanFlowOrigin
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appTheme) private var theme
     @State private var productName = ""
     @State private var showScanExpiry = false
 
     var body: some View {
         ZStack {
-//            Color(red: 0.93, green: 0.93, blue: 0.95)
-//                .ignoresSafeArea()
-
             VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 14) {
                     TextField("Product Name", text: $productName)
@@ -28,25 +33,18 @@ struct InputProductNameView: View {
         }
         .navigationTitle("Input Product Name")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    GlassBackButton()
-                }
-            }
-
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showScanExpiry = true
                 } label: {
-                    Image(systemName: "arrow.up")
+                    Image(systemName: "arrow.forward")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(.white)
-                }.buttonStyle(.borderedProminent)
-                 
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(theme.appBlue)
+                  
             }
         }
         .navigationDestination(isPresented: $showScanExpiry) {
