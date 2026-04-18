@@ -17,6 +17,7 @@ enum FilterOption: String, CaseIterable{
 struct FilterTabView: View {
     @Binding var selectedTab: FilterOption
     var body: some View {
+        // MARK: - Filter Tabs
         Picker("", selection: $selectedTab) {
                    ForEach(FilterOption.allCases, id: \.self) { filter in
                        Text(filter.rawValue).tag(filter)
