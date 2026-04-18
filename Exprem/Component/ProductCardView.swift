@@ -1,8 +1,16 @@
+//
+//  ProductCardView.swift
+//  Exprem
+//
+//  Created by Jon on 12/04/26.
+//
+
 import SwiftUI
 
 struct ProductCardView: View {
     var item: ProductItem   // use model directly
     var onDone: (ProductItem) -> Void
+    @Environment(\.appTheme) private var theme
 
     @State private var showConfirm = false
     @State private var showEdit = false
@@ -11,12 +19,12 @@ struct ProductCardView: View {
         HStack(spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Color(.systemGray5))
+                    .fill(theme.appBlueSoft)
                     .frame(width: 74, height: 74)
 
                 Text("Image")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(theme.appTextSecondary)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -26,7 +34,7 @@ struct ProductCardView: View {
 
                 Text("EXP Date: \(Text(formatDate(item.expiryDate)).fontWeight(.bold))")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(theme.appTextSecondary)
                 
             }
 
@@ -41,10 +49,10 @@ struct ProductCardView: View {
         .padding(16)
         .background {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
+                .fill(theme.appCard)
                 .overlay {
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color(.separator).opacity(0.25), lineWidth: 0.7)
+                        .stroke(theme.appBorder, lineWidth: 0.8)
                 }
                 .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 3)
         }
@@ -58,7 +66,7 @@ struct ProductCardView: View {
             } label: {
                 Label("Done", systemImage: "checkmark")
             }
-            .tint(.green)
+            .tint(theme.statusLong)
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button {
@@ -66,7 +74,7 @@ struct ProductCardView: View {
             } label: {
                 Label("Edit", systemImage: "pencil")
             }
-            .tint(.blue)
+            .tint(theme.appBlue)
         }
         .confirmationDialog("Mark as Done?", isPresented: $showConfirm, titleVisibility: .visible){
             Button("Mark as Done", role: .none){
@@ -79,6 +87,7 @@ struct ProductCardView: View {
         .sheet(isPresented: $showEdit) {
             NavigationStack {
                 EditPrroductView(name: item.name, expiryDate: item.expiryDate)
+                    .appTheme(theme)
             }
             .presentationDetents([.large])
         }
@@ -108,11 +117,11 @@ struct ProductCardView: View {
         let days = Calendar.current.dateComponents([.day], from: Date(), to: item.expiryDate).day ?? 0
         
         if days < 0 {
-            return .red
+            return theme.statusExpired
         } else if days <= 7 {
-            return .orange
+            return theme.statusUpcoming
         } else {
-            return .green
+            return theme.statusLong
         }
     }
 }
