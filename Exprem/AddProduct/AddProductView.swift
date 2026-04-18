@@ -27,6 +27,7 @@ struct AddProductView: View {
     @State private var showFrequencySheet = false
     @State private var showScanName = false
     @State private var showScanExpiry = false
+    @Environment(\.appTheme) private var theme
     
     var body: some View {
         VStack{
@@ -52,7 +53,7 @@ struct AddProductView: View {
                             } label: {
                                 Image(systemName: "camera.viewfinder")
                                     .font(.headline)
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(theme.appBlue)
                             }
                         }
 
@@ -66,7 +67,7 @@ struct AddProductView: View {
                             } label: {
                                 Image(systemName: "camera.viewfinder")
                                     .font(.headline)
-                                    .foregroundStyle(.blue)
+                                    .foregroundStyle(theme.appBlue)
                             }
                             
                         }
@@ -87,10 +88,10 @@ struct AddProductView: View {
                         }
                     } label: {
                         HStack {
-                            Text("Frequency").foregroundColor(.primary)
+                            Text("Frequency").foregroundColor(theme.appTextPrimary)
                             Spacer()
                             Text(selectedFrequency.rawValue)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(theme.appTextSecondary)
                         }
                     }
                 }
@@ -113,19 +114,19 @@ struct AddProductView: View {
             .navigationTitle("Add Product")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button{
-                        dismiss()
-                    } label: {
-                        GlassBackButton()
-                    }
-                }
+//                ToolbarItem(placement: .navigationBarLeading) {
+//                    Button{
+//                        dismiss()
+//                    } label: {
+//                        GlassBackButton()
+//                    }
+//                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         NotificationCenter.default.post(name: .returnToDashboard, object: nil)
                         dismiss()
                     }.buttonStyle(.borderedProminent)
-                        .tint(.blue)
+                        .tint(theme.appBlue)
                         .font(.headline.weight(.semibold))
                         
                 }
@@ -136,7 +137,8 @@ struct AddProductView: View {
             .navigationDestination(isPresented: $showScanExpiry) {
                 ScanProductExpiryView(origin: .addProduct)
             }
-        }.navigationBarBackButtonHidden(true)
+        }
+//        .navigationBarBackButtonHidden(true)
         
     }
 }
