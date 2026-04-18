@@ -7,15 +7,9 @@
 
 import SwiftUI
 
-//enum ReminderFrequency: String, CaseIterable {
-//    case daily = "Every Day"
-//    case weekly = "Every Week"
-//    case monthly = "Every Month"
-//    case yearly = "Every Year"
-//}
-
 struct EditPrroductView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appTheme) private var theme
 
     @State private var name: String
     @State private var expiryDate: Date
@@ -46,7 +40,8 @@ struct EditPrroductView: View {
 
                     Divider()
 
-                    DatePicker("Expiry Date", selection: $expiryDate, displayedComponents: .date).tint(.blue)
+                    DatePicker("Expiry Date", selection: $expiryDate, displayedComponents: .date)
+                        .tint(theme.appBlue)
                 }
                 .padding(.vertical, 2)
             } header: {
@@ -67,7 +62,7 @@ struct EditPrroductView: View {
                         Text("Frequency").foregroundColor(.primary)
                         Spacer()
                         Text(selectedFrequency.rawValue)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(theme.appTextSecondary)
                     }
                 }
             } header: {
@@ -97,7 +92,10 @@ struct EditPrroductView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") {
                     dismiss()
-                }.buttonStyle(.borderedProminent).foregroundStyle(.white)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(theme.appBlue)
+                .foregroundStyle(.white)
             }
         }
     }
