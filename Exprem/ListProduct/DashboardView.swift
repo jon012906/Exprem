@@ -22,6 +22,7 @@ let mockLong: [ProductItem] = [
 ]
 
 struct DashboardView: View {
+    @Environment(\.appTheme) private var theme
 
     @State private var searchText = ""
     @State private var selectedFilter: FilterOption = .all
@@ -52,12 +53,11 @@ struct DashboardView: View {
     
     // MARK: - Body
     var body: some View {
-//        NavigationStack{
             // Content Section
             List {
                 if !filteredUpcoming.isEmpty {
                     Section(header: Text("Upcoming")
-                        .foregroundColor(.orange)) {
+                        .foregroundColor(theme.statusUpcoming)) {
                         ForEach(filteredUpcoming) { item in
                             ProductCardView(item: item, onDone: { _ in })
                                 .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
@@ -69,7 +69,7 @@ struct DashboardView: View {
                 
                 if !filteredNextMonth.isEmpty {
                     Section(header: Text("Next Month")
-                        .foregroundColor(.green)) {
+                        .foregroundColor(theme.statusLong)) {
                         ForEach(filteredNextMonth) { item in
                             ProductCardView(item: item, onDone: { _ in })
                                 .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
@@ -81,7 +81,7 @@ struct DashboardView: View {
                 
                 if !filteredLong.isEmpty {
                     Section(header: Text("Still Long")
-                        .foregroundColor(.green)) {
+                        .foregroundColor(theme.statusLong)) {
                         ForEach(filteredLong) { item in
                             ProductCardView(item: item, onDone: { _ in })
                                 .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
@@ -92,7 +92,7 @@ struct DashboardView: View {
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Color(uiColor: .systemGroupedBackground))
+            .background(theme.appBackground)
             .listStyle(.insetGrouped)
             
             .safeAreaInset(edge: .top) {
@@ -106,7 +106,6 @@ struct DashboardView: View {
             //  Search
             .searchable(text: $searchText, prompt: "Search products")
             
-            
             // Add Button
             .safeAreaInset(edge: .bottom) {
                 HStack {
@@ -118,9 +117,9 @@ struct DashboardView: View {
                         Image(systemName: "plus")
                             .foregroundColor(.white)
                             .frame(width: 56, height: 56)
-                            .background(Color.blue)
+                            .background(theme.appBlue)
                             .clipShape(Circle())
-                            .shadow(radius: 4)
+                            .shadow(color: theme.appBlue.opacity(0.28), radius: 6, x: 0, y: 3)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -128,13 +127,12 @@ struct DashboardView: View {
             }
             .navigationDestination(isPresented: $showScanProductName) {
                 ScanProductNameView(origin: .onboarding)
+                    .appTheme(theme)
             }
             .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
                 showScanProductName = false
             }
         }
-//    }
-
 }
 
     
