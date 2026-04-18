@@ -10,6 +10,7 @@ import SwiftUI
 struct ProductSectionView: View {
     var title: String
     var products: [ProductItem]
+    @Environment(\.appTheme) private var theme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -17,7 +18,7 @@ struct ProductSectionView: View {
             // Section Title
             Text("\(title) (\(products.count))")
                 .font(.subheadline)
-                .foregroundColor(.gray)
+                .foregroundColor(theme.appTextSecondary)
                 .padding(.horizontal)
 
             // Product List
