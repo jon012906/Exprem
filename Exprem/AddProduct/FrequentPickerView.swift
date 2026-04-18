@@ -1,3 +1,10 @@
+//
+//  FrequentPickerView.swift
+//  Exprem
+//
+//  Created by Jon on 12/04/26.
+//
+
 import SwiftUI
 
 struct FrequencyPickerView: View {
