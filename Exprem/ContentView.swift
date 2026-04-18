@@ -8,10 +8,13 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         NavigationStack{
             DashboardView()
         }
+        .appTheme(colorScheme == .dark ? .dark : .light)
     }
 }
 
