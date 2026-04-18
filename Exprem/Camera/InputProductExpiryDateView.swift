@@ -1,17 +1,22 @@
+//
+//  InputProductExpiryDateView.swift
+//  Exprem
+//
+//  Created by Jon on 12/04/26.
+//
+
 import SwiftUI
 
 struct InputProductExpiryDateView: View {
     let origin: ScanFlowOrigin
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appTheme) private var theme
     @State private var selectedDate = Date()
     @State private var showAddProduct = false
 
     var body: some View {
         ZStack {
-//            Color(red: 0.93, green: 0.93, blue: 0.95)
-//                .ignoresSafeArea()
-
             VStack(spacing: 0) {
                 VStack(spacing: 16) {
                     DatePicker(
@@ -30,19 +35,10 @@ struct InputProductExpiryDateView: View {
         }
         .navigationTitle("Input Product Expiry Date")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(true)
         .onAppear {
             showAddProduct = false
         }
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    GlassBackButton()
-                }
-            }
-
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     if origin == .onboarding {
@@ -51,10 +47,12 @@ struct InputProductExpiryDateView: View {
                         dismiss()
                     }
                 } label: {
-                    Image(systemName: "arrow.up")
+                    Image(systemName: "arrow.forward")
                         .font(.headline.weight(.bold))
                         .foregroundStyle(.white)
-                }.buttonStyle(.borderedProminent)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(theme.appBlue)
                 
             }
         }
