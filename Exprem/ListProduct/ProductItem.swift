@@ -11,4 +11,5 @@ struct ProductItem: Identifiable {
     let id = UUID()
     let name: String
     let expiryDate: Date
+//    let thumbnail: Data
 }
