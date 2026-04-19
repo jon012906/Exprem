@@ -23,8 +23,6 @@ struct ProductCardView: View {
                 .frame(width: 74, height: 74)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 
-                
-
             VStack(alignment: .leading, spacing: 6) {
                 Text(item.name)
                     .font(.title3.weight(.semibold))
