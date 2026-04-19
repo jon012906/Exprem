@@ -8,21 +8,22 @@
 import SwiftUI
 
 enum ReminderFrequency: String, CaseIterable {
-    case daily = "Every Day"
-    case weekly = "Every Week"
-    case monthly = "Every Month"
-    case yearly = "Every Year"
+    case daily = "Day"
+    case weekly = "Week"
+    case monthly = "Month"
+    case yearly = "Year"
 }
 
 struct AddProductView: View {
     
     @Environment(\.dismiss) private var dismiss
     
-    @State private var name = ""
+    @State private var name = "Name"
     @State private var expiryDate = Date()
     @State private var note = ""
     
     @State private var startDate = Date()
+    @State private var reminderAmount = 1
     @State private var selectedFrequency: ReminderFrequency = .weekly
     @State private var showFrequencySheet = false
     @State private var showScanName = false
@@ -32,35 +33,48 @@ struct AddProductView: View {
     var body: some View {
         VStack{
             List {
+                //MARK: THUMBNAIL
                 Section {
-                    ZStack {
-                        Image(.dummy)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 120)
+                    HStack{
+                        Spacer()
+                        ZStack {
+                            Image(.dummy)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(height: 120)
+                        }
+                        Spacer()
                     }
                 }
-
+                
+                //MARK: PRODUCT INFORMATION
                 Section {
                     VStack(spacing: 10) {
                         HStack(spacing: 8) {
-                            TextField("Product Name", text: $name)
-                                .font(.body)
+                            Text("Product Name")
+                                    .foregroundColor(theme.appPlaceholder)
+                                
+                                Spacer()
                             
-                            Spacer()
-                            Button {
-                                showScanName = true
-                            } label: {
-                                Image(systemName: "camera.viewfinder")
-                                    .font(.headline)
-                                    .foregroundStyle(theme.appBlue)
-                            }
+                                TextField("Name", text: $name)
+                                    .font(.body)
+                                    .multilineTextAlignment(.trailing)
+//                                    .frame(width: 115) // control width
+                                    
+                                
+                                Button {
+                                    showScanName = true
+                                } label: {
+                                    Image(systemName: "camera.viewfinder")
+                                        .font(.headline)
+                                        .foregroundStyle(theme.appBlue)
+                                }
                         }
 
                         Divider()
 
                         HStack(spacing: 8) {
-                            DatePicker("Expiry Date", selection: $expiryDate, displayedComponents: .date)
+                            DatePicker("Expiry Date", selection: $expiryDate, displayedComponents: .date).foregroundStyle(theme.appPlaceholder)
                             
                             Button {
                                 showScanExpiry = true
@@ -74,53 +88,44 @@ struct AddProductView: View {
                     }
                     .padding(.vertical, 2)
                 } header: {
-                    Text("Add Product")
+                    Text("Product Information")
                 }
                 
+                //MARK: SCHEDULE REMINDER
                 Section {
-                    DatePicker("Start Reminder", selection: $startDate, displayedComponents: .date)
+                    DatePicker("Start Reminder", selection: $startDate, displayedComponents: .date).foregroundStyle(theme.appPlaceholder)
                     
-                    Menu {
-                        ForEach(ReminderFrequency.allCases, id: \.self) { frequency in
-                            Button(frequency.rawValue) {
-                                selectedFrequency = frequency
-                            }
-                        }
+                    Button {
+                        showFrequencySheet = true
                     } label: {
                         HStack {
-                            Text("Frequency").foregroundColor(theme.appTextPrimary)
+                            Text("Every").foregroundColor(theme.appPlaceholder)
                             Spacer()
-                            Text(selectedFrequency.rawValue)
+                            Text("\(reminderAmount) \(selectedFrequency.rawValue)")
                                 .foregroundColor(theme.appTextSecondary)
                         }
                     }
                 }
                 header: {
-                    Text("Set Reminder")
+                    Text("Schedule Reminder")
                 }
                 
+                //MARK: NOTE
                 Section {
                     ZStack {
                         TextField("Optional", text: $note)
                     }
+                    Divider()
                 }
                 header: {
                     Text("Note")
                 }
             }
             .scrollContentBackground(.hidden)
-//            .background(Color(red: 0.93, green: 0.93, blue: 0.95))
             .listSectionSpacing(14)
             .navigationTitle("Add Product")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-//                ToolbarItem(placement: .navigationBarLeading) {
-//                    Button{
-//                        dismiss()
-//                    } label: {
-//                        GlassBackButton()
-//                    }
-//                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
                         NotificationCenter.default.post(name: .returnToDashboard, object: nil)
@@ -137,9 +142,13 @@ struct AddProductView: View {
             .navigationDestination(isPresented: $showScanExpiry) {
                 ScanProductExpiryView(origin: .addProduct)
             }
+            .sheet(isPresented: $showFrequencySheet) {
+                FrequencyPickerView(amount: $reminderAmount, selected: $selectedFrequency)
+                    .presentationDetents([.height(320)])
+                    .presentationDragIndicator(.visible)
+                    .appTheme(theme)
+            }
         }
-//        .navigationBarBackButtonHidden(true)
-        
     }
 }
 
