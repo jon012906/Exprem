@@ -8,33 +8,55 @@
 import SwiftUI
 
 struct FrequencyPickerView: View {
-    @Environment(\.dismiss) var dismiss
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.appTheme) private var theme
+
+    @Binding var amount: Int
     @Binding var selected: ReminderFrequency
 
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(ReminderFrequency.allCases, id: \.self) { freq in
-                    HStack {
-                        Text(freq.rawValue)
-                        Spacer()
-                        if freq == selected {
-                            Image(systemName: "checkmark")
+            VStack(spacing: 8) {
+                HStack(spacing: 0) {
+                    Picker("Amount", selection: $amount) {
+                        ForEach(1...30, id: \.self) { value in
+                            Text("\(value)")
+                                .tag(value)
                         }
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        selected = freq
-                        dismiss()
+                    .pickerStyle(.wheel)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+
+                    Picker("Unit", selection: $selected) {
+                        ForEach(ReminderFrequency.allCases, id: \.self) { freq in
+                            Text(freq.rawValue)
+                                .tag(freq)
+                        }
                     }
+                    .pickerStyle(.wheel)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
                 }
+                .frame(height: 180)
+
+                Spacer()
             }
-            .navigationTitle("Reminder Frequency")
+            .background(theme.appBackground)
+            .navigationTitle("Reminder Interval")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
                 }
             }
         }
