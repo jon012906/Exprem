@@ -17,6 +17,7 @@ struct AppTheme {
     let appBorder: Color
     let appTextPrimary: Color
     let appTextSecondary: Color
+    let appPlaceholder:Color
 
     // MARK: Status Colors
     let statusUpcoming: Color
@@ -35,6 +36,7 @@ struct AppTheme {
         appBorder: Color(red: 0.851, green: 0.886, blue: 0.949),
         appTextPrimary: .primary,
         appTextSecondary: .secondary,
+        appPlaceholder: Color(red: 0.6, green: 0.6, blue: 0.6),
         statusUpcoming: Color(red: 0.851, green: 0.467, blue: 0.024),
         statusUpcomingBg: Color(red: 0.996, green: 0.953, blue: 0.78),
         statusLong: Color(red: 0.145, green: 0.388, blue: 0.922),
@@ -52,6 +54,7 @@ struct AppTheme {
         appBorder: Color(red: 0.224, green: 0.278, blue: 0.373),
         appTextPrimary: .primary,
         appTextSecondary: .secondary,
+        appPlaceholder: Color(red: 0.5, green: 0.5, blue: 0.5),
         statusUpcoming: Color(red: 0.98, green: 0.737, blue: 0.259),
         statusUpcomingBg: Color(red: 0.263, green: 0.188, blue: 0.067),
         statusLong: Color(red: 0.482, green: 0.678, blue: 0.996),
