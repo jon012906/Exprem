@@ -17,15 +17,13 @@ struct ProductCardView: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(theme.appBlueSoft)
-                    .frame(width: 74, height: 74)
-
-                Text("Image")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(theme.appTextSecondary)
-            }
+            Image(.dummy)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 74, height: 74)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                
+                
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(item.name)
@@ -130,7 +128,7 @@ struct ProductCardView: View {
     ProductCardView(
         item: ProductItem(
             name: "Cheese",
-            expiryDate: Calendar.current.date(byAdding: .day, value: 70, to: Date())!
+            expiryDate: Calendar.current.date(byAdding: .day, value: 70, to: Date())!,
         ),
         onDone: {_ in }
     )
