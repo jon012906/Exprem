@@ -33,7 +33,7 @@ struct InputProductExpiryDateView: View {
                 .padding(.horizontal, 12)
             }
         }
-        .navigationTitle("Input Product Expiry Date")
+        .navigationTitle("Select Product Expiry Date")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             showAddProduct = false
