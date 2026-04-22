@@ -27,7 +27,7 @@ struct ProductCardView: View {
                 Text(item.name)
                     .font(.title3.weight(.semibold))
                     .lineLimit(1)
-
+                    
                 Text("EXP Date: \(Text(formatDate(item.expiryDate)).fontWeight(.bold))")
                     .font(.subheadline)
                     .foregroundStyle(theme.appTextSecondary)
@@ -101,7 +101,17 @@ struct ProductCardView: View {
         let days = Calendar.current.dateComponents([.day], from: Date(), to: item.expiryDate).day ?? 0
         
         if days < 0 {
-            return "Expired"
+            let overdueDays = abs(days)
+
+            if overdueDays < 7 {
+                return "\(overdueDays)d ago"
+            } else if overdueDays < 30 {
+                return "\(overdueDays / 7)w ago"
+            } else if overdueDays < 365 {
+                return "\(overdueDays / 30)m ago"
+            } else {
+                return "Throw away"
+            }
         } else if days == 0 {
             return "Today"
         } else {
@@ -115,7 +125,7 @@ struct ProductCardView: View {
         if days < 0 {
             return theme.statusExpired
         } else if days <= 7 {
-            return theme.statusUpcoming
+            return theme.statusExpiredSoon
         } else {
             return theme.statusLong
         }

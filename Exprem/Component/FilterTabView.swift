@@ -8,10 +8,9 @@
 import SwiftUI
 
 enum FilterOption: String, CaseIterable{
+    case expiredSoon = "Expired Soon"
+    case expiredAlready = "Already Expired"
     case all = "All"
-    case upcoming = "Upcoming"
-    case stillLong = "Still Long"
-    case expired = "Expired"
 }
 
 struct FilterTabView: View {
@@ -28,5 +27,5 @@ struct FilterTabView: View {
 }
 
 #Preview {
-    FilterTabView(selectedTab: .constant(.all))
+    FilterTabView(selectedTab: .constant(.expiredSoon))
 }
