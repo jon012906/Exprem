@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ProductSectionView: View {
     var title: String
-    var products: [ProductItem]
+    var products: [Product]
     @Environment(\.appTheme) private var theme
 
     var body: some View {

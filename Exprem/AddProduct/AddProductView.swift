@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import SwiftData
+import UIKit
 
 enum ReminderFrequency: String, CaseIterable {
     case daily = "Day"
@@ -15,20 +17,30 @@ enum ReminderFrequency: String, CaseIterable {
 }
 
 struct AddProductView: View {
-    
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.appTheme) private var theme
+
+    @State private var draft: ProductDraft
     
-    @State private var name = "Name"
-    @State private var expiryDate = Date()
-    @State private var note = ""
+    @State private var name: String
+    @State private var expiryDate: Date
+    @State private var note: String
     
-    @State private var startDate = Date()
+    @State private var startDate: Date
     @State private var reminderAmount = 1
     @State private var selectedFrequency: ReminderFrequency = .weekly
     @State private var showFrequencySheet = false
     @State private var showScanName = false
     @State private var showScanExpiry = false
-    @Environment(\.appTheme) private var theme
+
+    init(draft: ProductDraft = ProductDraft()) {
+        _draft = State(initialValue: draft)
+        _name = State(initialValue: draft.nameProduct)
+        _expiryDate = State(initialValue: draft.expiryDate)
+        _note = State(initialValue: draft.note)
+        _startDate = State(initialValue: draft.reminderStartDate ?? Date())
+    }
     
     var body: some View {
         VStack{
@@ -38,10 +50,18 @@ struct AddProductView: View {
                     HStack{
                         Spacer()
                         ZStack {
-                            Image(.dummy)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 120)
+                            if let thumbnailImage {
+                                Image(uiImage: thumbnailImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 120, height: 120)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            } else {
+                                Image(.dummy)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(height: 120)
+                            }
                         }
                         Spacer()
                     }
@@ -59,10 +79,9 @@ struct AddProductView: View {
                                 TextField("Name", text: $name)
                                     .font(.body)
                                     .multilineTextAlignment(.trailing)
-//                                    .frame(width: 115) // control width
-                                    
                                 
                                 Button {
+                                    syncDraftFromForm()
                                     showScanName = true
                                 } label: {
                                     Image(systemName: "camera.viewfinder")
@@ -77,6 +96,7 @@ struct AddProductView: View {
                             DatePicker("Expiry Date", selection: $expiryDate, displayedComponents: .date).foregroundStyle(theme.appPlaceholder)
                             
                             Button {
+                                syncDraftFromForm()
                                 showScanExpiry = true
                             } label: {
                                 Image(systemName: "camera.viewfinder")
@@ -128,6 +148,27 @@ struct AddProductView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Save") {
+                        let cleanedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let finalName = cleanedName.isEmpty ? "Untitled Product" : cleanedName
+
+                        let savedThumbnailFilename: String?
+                        if let thumbnailData = draft.thumbnailData {
+                            savedThumbnailFilename = ProductImageStore.saveThumbnail(from: thumbnailData)
+                        } else {
+                            savedThumbnailFilename = draft.thumbnailPath
+                        }
+
+                        let product = Product(
+                            nameProduct: finalName,
+                            expiryDate: expiryDate,
+                            note: note,
+                            reminderStartDate: startDate,
+                            thumbnailPath: savedThumbnailFilename,
+                            updatedAt: Date()
+                        )
+
+                        modelContext.insert(product)
+                        try? modelContext.save()
                         NotificationCenter.default.post(name: .returnToDashboard, object: nil)
                         dismiss()
                     }.buttonStyle(.borderedProminent)
@@ -137,10 +178,10 @@ struct AddProductView: View {
                 }
             }
             .navigationDestination(isPresented: $showScanName) {
-                ScanProductNameView(origin: .addProduct)
+                ScanProductNameView(origin: .addProduct, draft: $draft)
             }
             .navigationDestination(isPresented: $showScanExpiry) {
-                ScanProductExpiryView(origin: .addProduct)
+                ScanProductExpiryView(origin: .addProduct, draft: $draft)
             }
             .sheet(isPresented: $showFrequencySheet) {
                 FrequencyPickerView(amount: $reminderAmount, selected: $selectedFrequency)
@@ -148,7 +189,29 @@ struct AddProductView: View {
                     .presentationDragIndicator(.visible)
                     .appTheme(theme)
             }
+            .onChange(of: draft) { _, newDraft in
+                if !newDraft.nameProduct.isEmpty {
+                    name = newDraft.nameProduct
+                }
+                expiryDate = newDraft.expiryDate
+                note = newDraft.note
+                startDate = newDraft.reminderStartDate ?? startDate
+            }
         }
+    }
+
+    private var thumbnailImage: UIImage? {
+        if let data = draft.thumbnailData {
+            return UIImage(data: data)
+        }
+        return ProductImageStore.loadImage(filename: draft.thumbnailPath)
+    }
+
+    private func syncDraftFromForm() {
+        draft.nameProduct = name
+        draft.expiryDate = expiryDate
+        draft.note = note
+        draft.reminderStartDate = startDate
     }
 }
 

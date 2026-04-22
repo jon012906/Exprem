@@ -6,22 +6,30 @@
 //
 
 import SwiftUI
+import SwiftData
+import UIKit
 
 struct EditPrroductView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appTheme) private var theme
+    @Environment(\.modelContext) private var modelContext
+
+    let product: Product
 
     @State private var name: String
-    @State private var expiryDate = Date()
-    @State private var note = ""
-    @State private var startDate = Date()
+    @State private var expiryDate: Date
+    @State private var note: String
+    @State private var startDate: Date
     @State private var reminderAmount = 1
     @State private var selectedFrequency: ReminderFrequency = .weekly
     @State private var showFrequencySheet = false
 
-    init(name: String, expiryDate: Date) {
-        _name = State(initialValue: name)
-        _expiryDate = State(initialValue: expiryDate)
+    init(product: Product) {
+        self.product = product
+        _name = State(initialValue: product.nameProduct)
+        _expiryDate = State(initialValue: product.expiryDate)
+        _note = State(initialValue: product.note)
+        _startDate = State(initialValue: product.reminderStartDate ?? Date())
     }
 
     var body: some View {
@@ -107,6 +115,12 @@ struct EditPrroductView: View {
 
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") {
+                    product.nameProduct = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    product.expiryDate = expiryDate
+                    product.note = note
+                    product.reminderStartDate = startDate
+                    product.updatedAt = Date()
+                    try? modelContext.save()
                     dismiss()
                 }
                 .buttonStyle(.borderedProminent)
@@ -125,6 +139,6 @@ struct EditPrroductView: View {
 
 #Preview {
     NavigationStack {
-        EditPrroductView(name: "Milk", expiryDate: Date().addingTimeInterval(86400 * 3))
+        EditPrroductView(product: Product(nameProduct: "Milk", expiryDate: Date().addingTimeInterval(86400 * 3)))
     }
 }

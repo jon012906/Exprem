@@ -6,10 +6,11 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct ProductCardView: View {
-    var item: ProductItem   // use model directly
-    var onDone: (ProductItem) -> Void
+    var item: Product
+    var onDone: (Product) -> Void
     @Environment(\.appTheme) private var theme
 
     @State private var showConfirm = false
@@ -17,14 +18,10 @@ struct ProductCardView: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(.dummy)
-                .resizable()
-                .scaledToFill()
-                .frame(width: 74, height: 74)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            thumbnailView
                 
             VStack(alignment: .leading, spacing: 6) {
-                Text(item.name)
+                Text(item.nameProduct)
                     .font(.title3.weight(.semibold))
                     .lineLimit(1)
                     
@@ -82,7 +79,7 @@ struct ProductCardView: View {
         }
         .sheet(isPresented: $showEdit) {
             NavigationStack {
-                EditPrroductView(name: item.name, expiryDate: item.expiryDate)
+                EditPrroductView(product: item)
                     .appTheme(theme)
             }
             .presentationDetents([.large])
@@ -130,13 +127,29 @@ struct ProductCardView: View {
             return theme.statusLong
         }
     }
+
+    private var thumbnailView: some View {
+        Group {
+            if let image = ProductImageStore.loadImage(filename: item.thumbnailPath) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(.dummy)
+                    .resizable()
+                    .scaledToFill()
+            }
+        }
+        .frame(width: 74, height: 74)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
 }
 
 #Preview("Normal") {
     ProductCardView(
-        item: ProductItem(
-            name: "Cheese",
-            expiryDate: Calendar.current.date(byAdding: .day, value: 70, to: Date())!,
+        item: Product(
+            nameProduct: "Cheese",
+            expiryDate: Calendar.current.date(byAdding: .day, value: 70, to: Date())!
         ),
         onDone: {_ in }
     )

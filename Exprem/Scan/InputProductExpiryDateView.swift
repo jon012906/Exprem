@@ -9,6 +9,7 @@ import SwiftUI
 
 struct InputProductExpiryDateView: View {
     let origin: ScanFlowOrigin
+    @Binding var draft: ProductDraft
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appTheme) private var theme
@@ -41,6 +42,7 @@ struct InputProductExpiryDateView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
+                    draft.expiryDate = selectedDate
                     if origin == .onboarding {
                         showAddProduct = true
                     } else {
@@ -57,13 +59,16 @@ struct InputProductExpiryDateView: View {
             }
         }
         .navigationDestination(isPresented: $showAddProduct) {
-            AddProductView()
+            AddProductView(draft: draft)
+        }
+        .onAppear {
+            selectedDate = draft.expiryDate
         }
     }
 }
 
 #Preview {
     NavigationStack {
-        InputProductExpiryDateView(origin: .onboarding)
+        InputProductExpiryDateView(origin: .onboarding, draft: .constant(ProductDraft()))
     }
 }

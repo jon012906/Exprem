@@ -25,7 +25,7 @@ struct NotificationCardView: View {
 
                 Text("2 Days Left!")
                     .fontWeight(.bold)
-                    .foregroundStyle(theme.appTextSecondary)
+                    .foregroundStyle(theme.statusExpiredSoon)
             }
 
             Spacer(minLength: 0)

@@ -9,10 +9,9 @@ import SwiftUI
 
 struct InputProductNameView: View {
     let origin: ScanFlowOrigin
+    @Binding var draft: ProductDraft
 
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.appTheme) private var theme
-    @State private var productName = ""
     @State private var showScanExpiry = false
 
     var body: some View {
@@ -36,6 +35,7 @@ struct InputProductNameView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
+                    draft.nameProduct = productName.trimmingCharacters(in: .whitespacesAndNewlines)
                     showScanExpiry = true
                 } label: {
                     Image(systemName: "arrow.forward")
@@ -48,13 +48,18 @@ struct InputProductNameView: View {
             }
         }
         .navigationDestination(isPresented: $showScanExpiry) {
-            ScanProductExpiryView(origin: origin)
+            ScanProductExpiryView(origin: origin, draft: $draft)
+        }
+        .onAppear {
+            productName = draft.nameProduct
         }
     }
+
+    @State private var productName = ""
 }
 
 #Preview {
     NavigationStack {
-        InputProductNameView(origin: .onboarding)
+        InputProductNameView(origin: .onboarding, draft: .constant(ProductDraft()))
     }
 }

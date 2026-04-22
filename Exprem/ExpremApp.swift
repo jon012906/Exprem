@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct ExpremApp: App {
@@ -13,5 +14,6 @@ struct ExpremApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: [Product.self])
     }
 }

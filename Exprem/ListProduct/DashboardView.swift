@@ -6,69 +6,46 @@
 //
 
 import SwiftUI
-
-// MARK: Mock Data
-let mockExpiredSoon: [ProductItem] = [
-    ProductItem(name: "Milk", expiryDate: Date().addingTimeInterval(86400 * 2)),
-    ProductItem(name: "Bread", expiryDate: Date().addingTimeInterval(86400 * 1)),
-    ProductItem(name: "Yogurt", expiryDate: Date())
-]
-
-let mockNextMonth: [ProductItem] = [
-    ProductItem(name: "Cheese", expiryDate: Date().addingTimeInterval(86400 * 20)),
-    ProductItem(name: "Butter", expiryDate: Date().addingTimeInterval(86400 * 14))
-]
-
-let mockLong: [ProductItem] = [
-    ProductItem(name: "Rice", expiryDate: Date().addingTimeInterval(86400 * 60)),
-    ProductItem(name: "Olive Oil", expiryDate: Date().addingTimeInterval(86400 * 120))
-]
-
-let mockExpired: [ProductItem] = [
-    ProductItem(name: "Spinach", expiryDate: Date().addingTimeInterval(86400 * -2)),
-    ProductItem(name: "Sausage", expiryDate: Date().addingTimeInterval(86400 * -10)),
-    ProductItem(name: "Frozen Dessert", expiryDate: Date().addingTimeInterval(86400 * -40)),
-    ProductItem(name: "Old Sauce", expiryDate: Date().addingTimeInterval(86400 * -430))
-]
+import SwiftData
 
 struct DashboardView: View {
     @Environment(\.appTheme) private var theme
-    
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Product.expiryDate) private var products: [Product]
+
     @State private var searchText = ""
     @State private var selectedFilter: FilterOption = .expiredSoon
     @State private var showScanProductName = false
+    @State private var draft = ProductDraft()
     
-    private var headerTitle = ["Watch Out!", "Awaree!", "Look!"]
-    private var headerSubtitle = ["Your items are expiring soon.", "You have expired items.", "Look all your items here!"]
-
-    private var allItems: [ProductItem] {
-        mockExpiredSoon + mockExpired + mockNextMonth + mockLong
+    private var allItems: [Product] {
+        products
     }
 
-    private var searchedItems: [ProductItem] {
+    private var searchedItems: [Product] {
         if searchText.isEmpty { return allItems }
-        return allItems.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        return allItems.filter { $0.nameProduct.localizedCaseInsensitiveContains(searchText) }
     }
 
-    private var filteredExpiredSoon: [ProductItem] {
+    private var filteredExpiredSoon: [Product] {
         searchedItems
             .filter { daysUntilExpiry(for: $0) >= 0 && daysUntilExpiry(for: $0) <= 7 }
             .sorted { $0.expiryDate < $1.expiryDate }
     }
 
-    private var filteredExpired: [ProductItem] {
+    private var filteredExpired: [Product] {
         searchedItems
             .filter { daysUntilExpiry(for: $0) < 0 }
             .sorted { $0.expiryDate > $1.expiryDate }
     }
 
-    private var filteredNextMonth: [ProductItem] {
+    private var filteredNextMonth: [Product] {
         searchedItems
             .filter { daysUntilExpiry(for: $0) >= 8 && daysUntilExpiry(for: $0) <= 30 }
             .sorted { $0.expiryDate < $1.expiryDate }
     }
 
-    private var filteredLong: [ProductItem] {
+    private var filteredLong: [Product] {
         searchedItems
             .filter { daysUntilExpiry(for: $0) > 30 }
             .sorted { $0.expiryDate < $1.expiryDate }
@@ -100,7 +77,7 @@ struct DashboardView: View {
                     if !filteredExpiredSoon.isEmpty {
                         Section(header: Text("Expired Soon").foregroundColor(theme.statusExpiredSoon)) {
                             ForEach(filteredExpiredSoon) { item in
-                                ProductCardView(item: item, onDone: { _ in })
+                                ProductCardView(item: item, onDone: markDone)
                                     .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                                     .listRowBackground(Color.clear)
                                     .listRowSeparator(.hidden)
@@ -113,7 +90,7 @@ struct DashboardView: View {
                     if !filteredExpired.isEmpty {
                         Section(header: Text("Already Expired").foregroundColor(theme.statusExpired)) {
                             ForEach(filteredExpired) { item in
-                                ProductCardView(item: item, onDone: { _ in })
+                                ProductCardView(item: item, onDone: markDone)
                                     .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                                     .listRowBackground(Color.clear)
                                     .listRowSeparator(.hidden)
@@ -126,7 +103,7 @@ struct DashboardView: View {
                     if !filteredNextMonth.isEmpty {
                         Section(header: Text("Next Month").foregroundColor(theme.statusLong)) {
                             ForEach(filteredNextMonth) { item in
-                                ProductCardView(item: item, onDone: { _ in })
+                                ProductCardView(item: item, onDone: markDone)
                                     .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                                     .listRowBackground(Color.clear)
                                     .listRowSeparator(.hidden)
@@ -138,7 +115,7 @@ struct DashboardView: View {
                         Section(header: Text("Safe to Use")
                             .foregroundColor(theme.statusLong)) {
                             ForEach(filteredLong) { item in
-                                ProductCardView(item: item, onDone: { _ in })
+                                ProductCardView(item: item, onDone: markDone)
                                     .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                                     .listRowBackground(Color.clear)
                                     .listRowSeparator(.hidden)
@@ -162,6 +139,7 @@ struct DashboardView: View {
                 HStack {
                     Spacer()
                     Button {
+                        draft = ProductDraft()
                         showScanProductName = true
                     } label: {
                         Image(systemName: "plus")
@@ -176,7 +154,7 @@ struct DashboardView: View {
                 .padding(.top, 8)
             }
             .navigationDestination(isPresented: $showScanProductName) {
-                ScanProductNameView(origin: .onboarding)
+                ScanProductNameView(origin: .onboarding, draft: $draft)
                     .appTheme(theme)
             }
             .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
@@ -186,8 +164,14 @@ struct DashboardView: View {
 
         
         }
-    private func daysUntilExpiry(for item: ProductItem) -> Int {
+    private func daysUntilExpiry(for item: Product) -> Int {
         Calendar.current.dateComponents([.day], from: Date(), to: item.expiryDate).day ?? 0
+    }
+
+    private func markDone(_ product: Product) {
+        ProductImageStore.deleteImage(filename: product.thumbnailPath)
+        modelContext.delete(product)
+        try? modelContext.save()
     }
 }
 
