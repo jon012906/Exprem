@@ -57,7 +57,7 @@ struct AddProductView: View {
                                     .frame(width: 120, height: 120)
                                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                             } else {
-                                Image(.dummy)
+                                Image(systemName: "cart")
                                     .resizable()
                                     .scaledToFit()
                                     .frame(height: 120)
@@ -135,7 +135,7 @@ struct AddProductView: View {
                     ZStack {
                         TextField("Optional", text: $note)
                     }
-                    Divider()
+//                    Divider()
                 }
                 header: {
                     Text("Note")

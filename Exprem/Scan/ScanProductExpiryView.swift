@@ -10,6 +10,7 @@ import UIKit
 
 struct ScanProductExpiryView: View {
     let origin: ScanFlowOrigin
+    @Binding var draft: ProductDraft
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appTheme) private var theme
@@ -80,10 +81,10 @@ struct ScanProductExpiryView: View {
         .navigationTitle("Scan Product Expiry")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $showManualExpiry) {
-            InputProductExpiryDateView(origin: origin)
+            InputProductExpiryDateView(origin: origin, draft: $draft)
         }
         .navigationDestination(isPresented: $showAddProduct) {
-            AddProductView()
+            AddProductView(draft: draft)
         }
     }
 
@@ -153,6 +154,6 @@ struct ScanProductExpiryView: View {
 
 #Preview {
     NavigationStack {
-        ScanProductExpiryView(origin: .onboarding)
+        ScanProductExpiryView(origin: .onboarding, draft: .constant(ProductDraft()))
     }
 }

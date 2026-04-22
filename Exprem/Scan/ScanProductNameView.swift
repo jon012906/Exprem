@@ -9,6 +9,7 @@ import UIKit
 
 struct ScanProductNameView: View {
     let origin: ScanFlowOrigin
+    @Binding var draft: ProductDraft
 
     @Environment(\.appTheme) private var theme
     @State private var cameraVM = CameraViewModel()
@@ -69,16 +70,19 @@ struct ScanProductNameView: View {
         }
         .onChange(of: cameraVM.isCaptured) { isCaptured in
             guard isCaptured else { return }
+            if let image = cameraVM.image {
+                draft.thumbnailData = image.jpegData(compressionQuality: 0.82)
+            }
             cameraVM.retake()
             showScanExpiry = true
         }
         .navigationTitle("Scan Product Name")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(isPresented: $showManualInput) {
-            InputProductNameView(origin: origin)
+            InputProductNameView(origin: origin, draft: $draft)
         }
         .navigationDestination(isPresented: $showScanExpiry) {
-            ScanProductExpiryView(origin: origin)
+            ScanProductExpiryView(origin: origin, draft: $draft)
         }
     }
 
@@ -148,6 +152,6 @@ struct ScanProductNameView: View {
 
 #Preview {
     NavigationStack {
-        ScanProductNameView(origin: .onboarding)
+        ScanProductNameView(origin: .onboarding, draft: .constant(ProductDraft()))
     }
 }
