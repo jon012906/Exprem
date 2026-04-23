@@ -18,6 +18,9 @@ struct DashboardView: View {
     @State private var showScanProductName = false
     @State private var draft = ProductDraft()
     
+    private var headerText = ["Watch Out!", "Alertt!!!", "Your Items"]
+    private var subHeaderText = ["Your items are expiring soon!", "Your items are expired, DO NOT USE IT!!", "Maintain your items"]
+    
     private var allItems: [Product] {
         products
     }
@@ -51,74 +54,136 @@ struct DashboardView: View {
             .sorted { $0.expiryDate < $1.expiryDate }
     }
 
+    private var isCurrentSegmentEmpty: Bool {
+        switch selectedFilter {
+        case .expiredSoon:   return filteredExpiredSoon.isEmpty
+        case .expiredAlready: return filteredExpired.isEmpty
+        case .all:            return filteredExpiredSoon.isEmpty && filteredExpired.isEmpty
+                                   && filteredNextMonth.isEmpty && filteredLong.isEmpty
+        }
+    }
+
     var body: some View {
         VStack{
             VStack{
-                HStack{
-                    Text("Watch out!")
-                        .foregroundStyle(theme.appBlue)
-                        .font(.largeTitle.weight(.semibold))
-                        .multilineTextAlignment(.leading)
-                        .padding(.leading, 16)
-                    Spacer()
+                if selectedFilter == .expiredSoon {
+                    HStack{
+                        Text(headerText[0])
+                            .foregroundStyle(theme.statusExpiredSoon)
+                            .font(.largeTitle.weight(.semibold))
+                            .multilineTextAlignment(.leading)
+                            .padding(.leading, 16)
+                        Spacer()
+                    }
+                    HStack{
+                        Text(subHeaderText[0])
+                            .foregroundStyle(theme.statusExpiredSoon)
+                            .font(.subheadline.weight(.medium))
+                            .multilineTextAlignment(.leading)
+                            .padding(.leading, 16)
+                        Spacer()
+                    }
                 }
-                HStack{
-                    Text("Your items are expiring soon.")
-                        .foregroundStyle(theme.appTextSecondary)
-                        .font(.subheadline.weight(.medium))
-                        .multilineTextAlignment(.leading)
-                        .padding(.leading, 16)
-                    Spacer()
+                if selectedFilter == .expiredAlready {
+                    HStack{
+                        Text(headerText[1])
+                            .foregroundStyle(theme.statusExpired)
+                            .font(.largeTitle.weight(.semibold))
+                            .multilineTextAlignment(.leading)
+                            .padding(.leading, 16)
+                        Spacer()
+                    }
+                    HStack{
+                        Text(subHeaderText[1])
+                            .foregroundStyle(theme.statusExpired)
+                            .font(.subheadline.weight(.medium))
+                            .multilineTextAlignment(.leading)
+                            .padding(.leading, 16)
+                        Spacer()
+                    }
+                }
+                if selectedFilter == .all {
+                    HStack{
+                        Text(headerText[2])
+                            .foregroundStyle(theme.appBlue)
+                            .font(.largeTitle.weight(.semibold))
+                            .multilineTextAlignment(.leading)
+                            .padding(.leading, 16)
+                        Spacer()
+                    }
+                    HStack{
+                        Text(subHeaderText[2])
+                            .foregroundStyle(theme.appBlue)
+                            .font(.subheadline.weight(.medium))
+                            .multilineTextAlignment(.leading)
+                            .padding(.leading, 16)
+                        Spacer()
+                    }
                 }
             }.padding(.bottom, 8)
             
             List {
-                if selectedFilter == .expiredSoon || selectedFilter == .all {
-                    if !filteredExpiredSoon.isEmpty {
-                        Section(header: Text("Expired Soon").foregroundColor(theme.statusExpiredSoon)) {
-                            ForEach(filteredExpiredSoon) { item in
-                                ProductCardView(item: item, onDone: markDone)
-                                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                                    .listRowBackground(Color.clear)
-                                    .listRowSeparator(.hidden)
+                if isCurrentSegmentEmpty {
+                    Section {
+                        VStack(){
+                            Spacer(minLength: 180)
+                            HStack{
+                                Spacer()
+                                emptyStateView
+                                Spacer()
                             }
-                        }
+                        }.listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                     }
-                }
-
-                if selectedFilter == .expiredAlready || selectedFilter == .all {
-                    if !filteredExpired.isEmpty {
-                        Section(header: Text("Already Expired").foregroundColor(theme.statusExpired)) {
-                            ForEach(filteredExpired) { item in
-                                ProductCardView(item: item, onDone: markDone)
-                                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                                    .listRowBackground(Color.clear)
-                                    .listRowSeparator(.hidden)
-                            }
-                        }
-                    }
-                }
-
-                if selectedFilter == .all {
-                    if !filteredNextMonth.isEmpty {
-                        Section(header: Text("Next Month").foregroundColor(theme.statusLong)) {
-                            ForEach(filteredNextMonth) { item in
-                                ProductCardView(item: item, onDone: markDone)
-                                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                                    .listRowBackground(Color.clear)
-                                    .listRowSeparator(.hidden)
+                } else {
+                    if selectedFilter == .expiredSoon || selectedFilter == .all {
+                        if !filteredExpiredSoon.isEmpty {
+                            Section(header: Text("Expired Soon").foregroundColor(theme.statusExpiredSoon)) {
+                                ForEach(filteredExpiredSoon) { item in
+                                    ProductCardView(item: item, onDone: markDone)
+                                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                }
                             }
                         }
                     }
 
-                    if !filteredLong.isEmpty {
-                        Section(header: Text("Safe to Use")
-                            .foregroundColor(theme.statusLong)) {
-                            ForEach(filteredLong) { item in
-                                ProductCardView(item: item, onDone: markDone)
-                                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                                    .listRowBackground(Color.clear)
-                                    .listRowSeparator(.hidden)
+                    if selectedFilter == .expiredAlready || selectedFilter == .all {
+                        if !filteredExpired.isEmpty {
+                            Section(header: Text("Already Expired").foregroundColor(theme.statusExpired)) {
+                                ForEach(filteredExpired) { item in
+                                    ProductCardView(item: item, onDone: markDone)
+                                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                }
+                            }
+                        }
+                    }
+
+                    if selectedFilter == .all {
+                        if !filteredNextMonth.isEmpty {
+                            Section(header: Text("Next Month").foregroundColor(theme.statusLong)) {
+                                ForEach(filteredNextMonth) { item in
+                                    ProductCardView(item: item, onDone: markDone)
+                                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                }
+                            }
+                        }
+
+                        if !filteredLong.isEmpty {
+                            Section(header: Text("Safe to Use")
+                                .foregroundColor(theme.statusLong)) {
+                                ForEach(filteredLong) { item in
+                                    ProductCardView(item: item, onDone: markDone)
+                                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                                        .listRowBackground(Color.clear)
+                                        .listRowSeparator(.hidden)
+                                }
                             }
                         }
                     }
@@ -172,6 +237,22 @@ struct DashboardView: View {
         ProductImageStore.deleteImage(filename: product.thumbnailPath)
         modelContext.delete(product)
         try? modelContext.save()
+    }
+    
+    private var emptyStateView: some View {
+        VStack() {
+            Spacer()
+            Image(systemName: "basket")
+                .font(.system(size: 60))
+                .foregroundStyle(.secondary)
+            Text("No groceries yet")
+                .font(.title3)
+                .fontWeight(.semibold)
+            Text("Tap + to add your first product")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
     }
 }
 
