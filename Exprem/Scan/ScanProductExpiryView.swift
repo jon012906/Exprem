@@ -14,7 +14,7 @@ struct ScanProductExpiryView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appTheme) private var theme
-    @StateObject private var session = ScanSessionState()
+    @State private var session = ScanSessionState()
     @State private var cameraVM = CameraViewModel()
     @State private var showManualExpiry = false
     @State private var showAddProduct = false

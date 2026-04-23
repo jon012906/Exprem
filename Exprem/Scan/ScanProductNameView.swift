@@ -12,7 +12,7 @@ struct ScanProductNameView: View {
     @Binding var draft: ProductDraft
 
     @Environment(\.appTheme) private var theme
-    @StateObject private var session = ScanSessionState()
+    @State private var session = ScanSessionState()
     @State private var cameraVM = CameraViewModel()
     @State private var showManualInput = false
     @State private var showScanExpiry = false

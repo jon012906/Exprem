@@ -9,11 +9,12 @@ import Foundation
 import UIKit
 
 @MainActor
-final class ScanSessionState: ObservableObject {
-    @Published var originalImage: UIImage?
-    @Published var cachedOCRText: String?
-    @Published var isProcessingOCR: Bool = false
-    @Published var lastOCRError: String?
+@Observable
+final class ScanSessionState {
+    var originalImage: UIImage?
+    var cachedOCRText: String?
+    var isProcessingOCR: Bool = false
+    var lastOCRError: String?
 
     private let ocrService = VisionOCRService()
     private let infoExtractor = FoundationProductInfoExtractor()
