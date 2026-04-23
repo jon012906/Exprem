@@ -158,8 +158,8 @@ final class NotificationScheduler {
         case 4:
             if productCount == 1, let primaryProduct {
                 titleBody = (
-                    "Segera kedaluwarsa!",
-                    "\(primaryProduct.nameProduct) kedaluwarsa minggu ini — cek sekarang"
+                    "Expiring Soon!",
+                    "\(primaryProduct.nameProduct) will be expired — cek sekarang"
                 )
             } else {
                 titleBody = (
