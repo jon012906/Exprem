@@ -14,6 +14,10 @@ final class Product {
     var expiryDate: Date
     var note: String
     var reminderStartDate: Date?
+    /// How many units before expiry reminders should begin.
+    var reminderAmount: Int
+    /// The unit of time for the reminder interval (day / week / month / year).
+    var reminderUnit: ReminderFrequency
     var thumbnailPath: String?
     var createdAt: Date
     var updatedAt: Date
@@ -24,6 +28,8 @@ final class Product {
         expiryDate: Date,
         note: String = "",
         reminderStartDate: Date? = nil,
+        reminderAmount: Int = 1,
+        reminderUnit: ReminderFrequency = .weekly,
         thumbnailPath: String? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date()
@@ -33,6 +39,8 @@ final class Product {
         self.expiryDate = expiryDate
         self.note = note
         self.reminderStartDate = reminderStartDate
+        self.reminderAmount = reminderAmount
+        self.reminderUnit = reminderUnit
         self.thumbnailPath = thumbnailPath
         self.createdAt = createdAt
         self.updatedAt = updatedAt

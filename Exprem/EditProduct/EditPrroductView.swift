@@ -14,15 +14,20 @@ struct EditPrroductView: View {
     @Environment(\.appTheme) private var theme
     @Environment(\.modelContext) private var modelContext
 
+    /// All products — needed so we can reschedule the full notification set after an edit.
+    @Query private var allProducts: [Product]
+
     let product: Product
 
     @State private var name: String
     @State private var expiryDate: Date
     @State private var note: String
     @State private var startDate: Date
-    @State private var reminderAmount = 1
-    @State private var selectedFrequency: ReminderFrequency = .weekly
+    @State private var reminderAmount: Int
+    @State private var selectedFrequency: ReminderFrequency
     @State private var showFrequencySheet = false
+
+    private let scheduler = NotificationScheduler()
 
     init(product: Product) {
         self.product = product
@@ -30,14 +35,16 @@ struct EditPrroductView: View {
         _expiryDate = State(initialValue: product.expiryDate)
         _note = State(initialValue: product.note)
         _startDate = State(initialValue: product.reminderStartDate ?? Date())
+        _reminderAmount = State(initialValue: product.reminderAmount)
+        _selectedFrequency = State(initialValue: product.reminderUnit)
     }
 
     var body: some View {
         List {
-            
+
             //MARK: PRODUCT INFORMATION
             Section {
-                HStack{
+                HStack {
                     Spacer()
                     ZStack {
                         if let thumbnailImage {
@@ -57,18 +64,18 @@ struct EditPrroductView: View {
                 }
             }
 
-            //MARK: SCHEDULE REMINDER
+            //MARK: PRODUCT INFORMATION
             Section {
                 VStack(spacing: 10) {
-                    HStack{
+                    HStack {
                         Text("Product Name")
-                                .foregroundColor(theme.appPlaceholder)
-                        
+                            .foregroundColor(theme.appPlaceholder)
+
                         Spacer()
-                        
+
                         TextField("Name", text: $name)
-                                .font(.body)
-                                .multilineTextAlignment(.trailing)
+                            .font(.body)
+                            .multilineTextAlignment(.trailing)
                     }
 
                     Divider()
@@ -81,7 +88,7 @@ struct EditPrroductView: View {
             } header: {
                 Text("Product Information")
             }
-            
+
             //MARK: SCHEDULE REMINDER
             Section {
                 DatePicker("Start Reminder", selection: $startDate, displayedComponents: .date)
@@ -123,14 +130,7 @@ struct EditPrroductView: View {
 
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") {
-                    let cleanedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                    product.nameProduct = cleanedName.isEmpty ? "Untitled Product" : cleanedName
-                    product.expiryDate = expiryDate
-                    product.note = note
-                    product.reminderStartDate = startDate
-                    product.updatedAt = Date()
-                    try? modelContext.save()
-                    dismiss()
+                    saveEdits()
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(theme.appBlue)
@@ -145,8 +145,27 @@ struct EditPrroductView: View {
         }
     }
 
+    // MARK: - Private
+
     private var thumbnailImage: UIImage? {
         ProductImageStore.loadImage(filename: product.thumbnailPath)
+    }
+
+    private func saveEdits() {
+        let cleanedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        product.nameProduct = cleanedName.isEmpty ? "Untitled Product" : cleanedName
+        product.expiryDate = expiryDate
+        product.note = note
+        product.reminderStartDate = startDate
+        product.reminderAmount = reminderAmount
+        product.reminderUnit = selectedFrequency
+        product.updatedAt = Date()
+        try? modelContext.save()
+
+        // Reschedule all notifications with updated product data
+        scheduler.scheduleAll(products: allProducts)
+
+        dismiss()
     }
 }
 

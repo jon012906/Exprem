@@ -17,7 +17,9 @@ struct DashboardView: View {
     @State private var selectedFilter: FilterOption = .expiredSoon
     @State private var showScanProductName = false
     @State private var draft = ProductDraft()
-    
+
+    private let scheduler = NotificationScheduler()
+
     private var headerText = ["Watch Out!", "Alertt!!!", "Your Items"]
     private var subHeaderText = ["Your items are expiring soon!", "Your items are expired, DO NOT USE IT!!", "Maintain your items"]
     
@@ -234,9 +236,20 @@ struct DashboardView: View {
     }
 
     private func markDone(_ product: Product) {
+        print("[DEBUG] Deleting product: \(product.nameProduct), id: \(product.id)")
         ProductImageStore.deleteImage(filename: product.thumbnailPath)
         modelContext.delete(product)
-        try? modelContext.save()
+        
+        do {
+            try modelContext.save()
+            print("[DEBUG] Delete SUCCESS!")
+        } catch {
+            print("[DEBUG] Delete FAILED: \(error)")
+        }
+        
+        // Reschedule with the remaining products after deletion
+        let remaining = products.filter { $0.id != product.id }
+        scheduler.scheduleAll(products: remaining)
     }
     
     private var emptyStateView: some View {
