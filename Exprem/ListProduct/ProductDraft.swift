@@ -1,3 +1,9 @@
+//
+// ProductDraft.swift
+// Exprem
+//
+// Created by Jon on 22/04/26.
+
 import Foundation
 
 struct ProductDraft: Equatable {

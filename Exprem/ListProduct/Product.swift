@@ -1,3 +1,9 @@
+//
+// Product.swift
+// Exprem
+//
+// Created by Jon on 12/04/26.
+
 import Foundation
 import SwiftData
 

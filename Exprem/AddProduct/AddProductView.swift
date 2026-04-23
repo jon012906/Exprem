@@ -135,7 +135,6 @@ struct AddProductView: View {
                     ZStack {
                         TextField("Optional", text: $note)
                     }
-//                    Divider()
                 }
                 header: {
                     Text("Note")

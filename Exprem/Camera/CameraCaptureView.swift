@@ -1,3 +1,9 @@
+//
+// CameraCaptureView.swift
+// Exprem
+//
+// Created by Jon on 22/04/26.
+
 import SwiftUI
 import UIKit
 

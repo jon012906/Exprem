@@ -40,10 +40,18 @@ struct EditPrroductView: View {
                 HStack{
                     Spacer()
                     ZStack {
-                        Image(.dummy)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 120)
+                        if let thumbnailImage {
+                            Image(uiImage: thumbnailImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 120, height: 120)
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        } else {
+                            Image(systemName: "cart")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(height: 120)
+                        }
                     }
                     Spacer()
                 }
@@ -115,7 +123,8 @@ struct EditPrroductView: View {
 
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") {
-                    product.nameProduct = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let cleanedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    product.nameProduct = cleanedName.isEmpty ? "Untitled Product" : cleanedName
                     product.expiryDate = expiryDate
                     product.note = note
                     product.reminderStartDate = startDate
@@ -134,6 +143,10 @@ struct EditPrroductView: View {
                 .presentationDragIndicator(.visible)
                 .appTheme(theme)
         }
+    }
+
+    private var thumbnailImage: UIImage? {
+        ProductImageStore.loadImage(filename: product.thumbnailPath)
     }
 }
 

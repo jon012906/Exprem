@@ -14,6 +14,7 @@ struct ScanProductExpiryView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appTheme) private var theme
+    @StateObject private var session = ScanSessionState()
     @State private var cameraVM = CameraViewModel()
     @State private var showManualExpiry = false
     @State private var showAddProduct = false
@@ -32,6 +33,10 @@ struct ScanProductExpiryView: View {
 
                     if cameraVM.permissionDenied {
                         permissionOverlay
+                    }
+
+                    if session.isProcessingOCR {
+                        processingOverlay
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -71,11 +76,28 @@ struct ScanProductExpiryView: View {
         }
         .onChange(of: cameraVM.isCaptured) { isCaptured in
             guard isCaptured else { return }
+            guard let image = cameraVM.image else { return }
+            session.storeCapturedImage(image)
             cameraVM.retake()
-            if origin == .onboarding {
-                showAddProduct = true
-            } else {
-                dismiss()
+
+            Task {
+                if let expiryDate = await session.extractExpiryDate() {
+                    draft.expiryDate = expiryDate
+
+                    if draft.thumbnailData == nil {
+                        draft.thumbnailData = session.getThumbnailData()
+                    }
+
+                    session.clearCachedText()
+
+                    if origin == .onboarding {
+                        showAddProduct = true
+                    } else {
+                        dismiss()
+                    }
+                } else {
+                    showManualExpiry = true
+                }
             }
         }
         .navigationTitle("Scan Product Expiry")
@@ -149,6 +171,21 @@ struct ScanProductExpiryView: View {
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .padding(.horizontal, 26)
+    }
+
+    private var processingOverlay: some View {
+        VStack(spacing: 10) {
+            ProgressView()
+                .progressViewStyle(.circular)
+                .tint(theme.appBlue)
+
+            Text("Scanning...")
+                .font(.subheadline)
+                .foregroundStyle(theme.appTextSecondary)
+        }
+        .padding(24)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 

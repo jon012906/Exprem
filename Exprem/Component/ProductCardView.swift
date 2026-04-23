@@ -73,7 +73,7 @@ struct ProductCardView: View {
             Button("Mark as Done", role: .none){
                 onDone(item)
             }
-            Button("Cancle", role: .cancel){}
+            Button("Cancel", role: .cancel){}
         }message: {
             Text("Are you sure you want to mark this item as done?")
         }
@@ -135,7 +135,7 @@ struct ProductCardView: View {
                     .resizable()
                     .scaledToFill()
             } else {
-                Image(.dummy)
+                Image(systemName: "cart")
                     .resizable()
                     .scaledToFill()
             }
