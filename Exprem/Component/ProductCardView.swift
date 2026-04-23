@@ -57,25 +57,25 @@ struct ProductCardView: View {
             Button {
                 showConfirm = true
             } label: {
-                Label("Done", systemImage: "checkmark")
+                Label("Delete", systemImage: "trash")
             }
-            .tint(theme.statusLong)
+            .tint(theme.statusExpired)
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button {
-                showEdit = true
+                showConfirm = true
             } label: {
-                Label("Edit", systemImage: "pencil")
+                Label("Delete", systemImage: "trash")
             }
-            .tint(theme.appBlue)
+            .tint(theme.statusExpired)
         }
-        .confirmationDialog("Mark as Done?", isPresented: $showConfirm, titleVisibility: .visible){
-            Button("Mark as Done", role: .none){
+        .confirmationDialog("Delete Item?", isPresented: $showConfirm, titleVisibility: .visible){
+            Button("Delete", role: .none){
                 onDone(item)
             }
             Button("Cancel", role: .cancel){}
         }message: {
-            Text("Are you sure you want to mark this item as done?")
+            Text("Are you sure you want to delete this item?")
         }
         .sheet(isPresented: $showEdit) {
             NavigationStack {
