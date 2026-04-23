@@ -159,35 +159,35 @@ final class NotificationScheduler {
             if productCount == 1, let primaryProduct {
                 titleBody = (
                     "Expiring Soon!",
-                    "\(primaryProduct.nameProduct) will be expired — cek sekarang"
+                    "\(primaryProduct.nameProduct) will be expired. Check it now!"
                 )
             } else {
                 titleBody = (
-                    "Segera kedaluwarsa!",
-                    "Ada \(productCount) produk kedaluwarsa minggu ini — cek sekarang"
+                    "Expiring Soon!",
+                    "There are \(productCount) products will be expired. Check it now!"
                 )
             }
         case 3:
             if productCount == 1, let primaryProduct {
                 titleBody = (
-                    "Hampir kedaluwarsa",
-                    "\(primaryProduct.nameProduct) kedaluwarsa dalam 2 minggu"
+                    "Expiring Soon!",
+                    "\(primaryProduct.nameProduct) will be expired. Check it now!"
                 )
             } else {
                 titleBody = (
-                    "Hampir kedaluwarsa",
-                    "Ada \(productCount) produk kedaluwarsa dalam 2 minggu"
+                    "Expiring Soon!",
+                    "There are \(productCount) products will be expired. Check it now!"
                 )
             }
         case 2:
             titleBody = (
-                "Pengingat kedaluwarsa",
-                "Ada \(productCount) produk kedaluwarsa bulan ini — cek sekarang"
+                "Expiring Soon!",
+                "There are \(productCount) products will be expired. Check it now!"
             )
         default:
             titleBody = (
-                "Pengingat ba.si",
-                "Ada \(productCount) produk yang akan segera kedaluwarsa — pantau di ba.si"
+                "Expiring Soon!",
+                "There are \(productCount) products will be expired. Check it now!"
             )
         }
 
