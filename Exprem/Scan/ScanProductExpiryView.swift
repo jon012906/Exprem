@@ -18,6 +18,8 @@ struct ScanProductExpiryView: View {
     @State private var cameraVM = CameraViewModel()
     @State private var showManualExpiry = false
     @State private var showAddProduct = false
+    @State private var showNotDetectedAlert = false
+    @State private var detectedExpiry: Date? = nil
 
     var body: some View {
         ZStack {
@@ -78,30 +80,55 @@ struct ScanProductExpiryView: View {
             guard isCaptured else { return }
             guard let image = cameraVM.image else { return }
             session.storeCapturedImage(image)
-            cameraVM.retake()
+//            cameraVM.retake()
 
             Task {
+                defer { cameraVM.retake() }
                 if let expiryDate = await session.extractExpiryDate() {
-                    draft.expiryDate = expiryDate
-
-                    if draft.thumbnailData == nil {
-                        draft.thumbnailData = session.getThumbnailData()
-                    }
-
-                    session.clearCachedText()
-
-                    if origin == .onboarding {
-                        showAddProduct = true
-                    } else {
-                        dismiss()
+                    await MainActor.run {
+                        detectedExpiry = expiryDate
                     }
                 } else {
-                    showManualExpiry = true
+                    await MainActor.run {
+                        showNotDetectedAlert = true
+                    }
                 }
             }
         }
         .navigationTitle("Scan Product Expiry")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Expiry Date Not Detected", isPresented: $showNotDetectedAlert) {
+            Button("Try Again", role: .cancel) { }
+            Button("Input Manual") { showManualExpiry = true }
+        } message: {
+            Text("Please try again or input manually.")
+        }
+        .alert("Scan Result", isPresented: Binding(
+            get: { detectedExpiry != nil },
+            set: { if !$0 { detectedExpiry = nil } }
+        )) {
+            Button("Retake", role: .cancel) {
+                detectedExpiry = nil
+            }
+            Button("Continue") {
+                guard let expiry = detectedExpiry else { return }
+                draft.expiryDate = expiry
+                if draft.thumbnailData == nil {
+                    draft.thumbnailData = session.getThumbnailData()
+                }
+                session.clearCachedText()
+                detectedExpiry = nil
+                if origin == .onboarding {
+                    showAddProduct = true
+                } else {
+                    dismiss()
+                }
+            }
+        } message: {
+            if let expiry = detectedExpiry {
+                Text("Expiry date detected:\n\(expiry.formatted(date: .long, time: .omitted))")
+            }
+        }
         .navigationDestination(isPresented: $showManualExpiry) {
             InputProductExpiryDateView(origin: origin, draft: $draft)
         }

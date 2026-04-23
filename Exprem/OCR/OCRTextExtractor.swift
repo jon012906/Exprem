@@ -18,9 +18,9 @@ enum OCRServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidImage:
-            return "Gambar tidak valid untuk diproses."
+            return "Invalid Image."
         case .noTextDetected:
-            return "Teks tidak terdeteksi, coba foto ulang."
+            return "Text not detected"
         }
     }
 }

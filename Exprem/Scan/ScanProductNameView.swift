@@ -16,6 +16,8 @@ struct ScanProductNameView: View {
     @State private var cameraVM = CameraViewModel()
     @State private var showManualInput = false
     @State private var showScanExpiry = false
+    @State private var showNotDetectedAlert = false
+    @State private var detectedName: String? = nil
 
     var body: some View {
         ZStack {
@@ -81,16 +83,42 @@ struct ScanProductNameView: View {
 
             Task {
                 if let name = await session.processAndExtractName() {
-                    draft.nameProduct = name
-                    draft.thumbnailData = session.getThumbnailData()
-                    showScanExpiry = true
+                    await MainActor.run {
+                        detectedName = name
+                    }
                 } else {
-                    showManualInput = true
+                    await MainActor.run {
+                        showNotDetectedAlert = true
+                    }
                 }
             }
         }
         .navigationTitle("Scan Product Name")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Product Name Not Detected", isPresented: $showNotDetectedAlert) {
+            Button("Try Again", role: .cancel) { }
+            Button("Input Manual") { showManualInput = true }
+        } message: {
+            Text("Please try again or input manually.")
+        }
+        .alert("Scan Result", isPresented: Binding(
+            get: { detectedName != nil },
+            set: { if !$0 { detectedName = nil } }
+        )) {
+            Button("Retake", role: .cancel) {
+                detectedName = nil
+            }
+            Button("Continue") {
+                if let name = detectedName {
+                    draft.nameProduct = name
+                    draft.thumbnailData = session.getThumbnailData()
+                    detectedName = nil
+                    showScanExpiry = true
+                }
+            }
+        } message: {
+            Text("Product name:\n\"\(detectedName ?? "")\"")
+        }
         .navigationDestination(isPresented: $showManualInput) {
             InputProductNameView(origin: origin, draft: $draft)
         }
