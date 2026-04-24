@@ -112,7 +112,7 @@ struct EditPrroductView: View {
                 ZStack {
                     TextField("Optional", text: $note)
                 }
-                Divider()
+//                Divider()
             } header: {
                 Text("Note")
             }
