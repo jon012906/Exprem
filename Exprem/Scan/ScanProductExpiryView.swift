@@ -46,7 +46,7 @@ struct ScanProductExpiryView: View {
                 Button {
                     showManualExpiry = true
                 } label: {
-                    Label("Type your product expiry date", systemImage: "keyboard")
+                    Label("Input your product expiry date", systemImage: "calendar.badge.clock")
                         .font(.headline.weight(.semibold))
                         .foregroundStyle(theme.appBlue)
                         .frame(maxWidth: .infinity)

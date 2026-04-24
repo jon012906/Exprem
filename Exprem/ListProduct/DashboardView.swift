@@ -21,7 +21,7 @@ struct DashboardView: View {
     private let scheduler = NotificationScheduler()
 
     private var headerText = ["Watch Out!", "Alertt!!!", "Your Items"]
-    private var subHeaderText = ["Your items are expiring soon!", "Your items are expired, DO NOT USE IT!!", "Maintain your items"]
+    private var subHeaderText = ["Your items are expiring soon!", "Your items have already expired, DO NOT USE IT!!", "Maintain your items"]
     
     private var allItems: [Product] {
         products
