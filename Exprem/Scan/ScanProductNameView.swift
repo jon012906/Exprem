@@ -79,9 +79,10 @@ struct ScanProductNameView: View {
             guard isCaptured else { return }
             guard let image = cameraVM.image else { return }
             session.storeCapturedImage(image)
-            cameraVM.retake()
+//            cameraVM.retake()
 
             Task {
+                defer { cameraVM.retake() }
                 if let name = await session.processAndExtractName() {
                     await MainActor.run {
                         detectedName = name
