@@ -112,7 +112,15 @@ struct ProductCardView: View {
         } else if days == 0 {
             return "Today"
         } else {
-            return "\(days)d left"
+            if days < 7 {
+                return "\(days)d left"
+            }
+            else if days < 30 {
+                return "\(days / 7)w left"
+            }
+            else {
+                return "\(days / 30)m left"
+            }
         }
     }
     
