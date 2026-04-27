@@ -9,9 +9,9 @@ import Foundation
 
 protocol ProductInfoExtracting {
     func extractProductName(from ocrText: String) async throws -> String
-    func extractExpiryDate(from ocrText: String) async throws -> Date
+    func extractExpiryDate(from ocrText: String) async throws -> String
 }
 
 protocol FoundationModelPrompting {
-    func respond(to prompt: String) async throws -> String
+    func extract(from ocrText: String) async throws -> ProductExtractionResult
 }

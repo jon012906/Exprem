@@ -8,25 +8,31 @@
 import AVFoundation
 import UIKit
 
-final class CameraManager {
+final class CameraManager: NSObject {
     let session = AVCaptureSession()
     private let photoOutput = AVCapturePhotoOutput()
+    private let videoOutput = AVCaptureVideoDataOutput()
     private let sessionQueue = DispatchQueue(label: "camera.session.queue")
-    /// retain delegates to prevent them from being deallocated before the capture process completes
     private var inFlightDelegates: [Int64: PhotoCaptureDelegate] = [:]
-    
+
     private var isConfigured = false
-    
+
     var onPhotoCaptured: ((UIImage) -> Void)?
-    
+    var onVideoFrame: ((CVPixelBuffer) -> Void)?
+
+    override init() {
+        super.init()
+        videoOutput.setSampleBufferDelegate(self, queue: sessionQueue)
+    }
+
     func configure() {
         sessionQueue.async {
             guard !self.isConfigured else { return }
             self.session.beginConfiguration()
             self.session.sessionPreset = .photo
-            
-            defer {self.session.commitConfiguration()}
-            
+
+            defer { self.session.commitConfiguration() }
+
             guard let device = AVCaptureDevice.default(.builtInWideAngleCamera,
                                                        for: .video,
                                                        position: .back),
@@ -36,21 +42,26 @@ final class CameraManager {
                 print("Camera input setup failed")
                 return
             }
-            
+
             self.session.addInput(input)
-            
-            // add photo output
+
             guard self.session.canAddOutput(self.photoOutput) else {
                 print("Photo output setup failed")
                 return
             }
-            
             self.session.addOutput(self.photoOutput)
-            
+
+            guard self.session.canAddOutput(self.videoOutput) else {
+                print("Video output setup failed")
+                return
+            }
+            self.videoOutput.alwaysDiscardsLateVideoFrames = true
+            self.session.addOutput(self.videoOutput)
+
             self.isConfigured = true
         }
     }
-        
+
     func start() {
         sessionQueue.async {
             if !self.session.isRunning {
@@ -58,7 +69,7 @@ final class CameraManager {
             }
         }
     }
-        
+
     func stop() {
         sessionQueue.async {
             if self.session.isRunning {
@@ -66,12 +77,10 @@ final class CameraManager {
             }
         }
     }
-            
+
     func capturePhoto() {
         sessionQueue.async {
-            guard self.isConfigured, self.session.isRunning else {
-                return
-            }
+            guard self.isConfigured, self.session.isRunning else { return }
 
             let settings = AVCapturePhotoSettings()
             settings.flashMode = .auto
@@ -91,7 +100,7 @@ final class CameraManager {
             self.photoOutput.capturePhoto(with: settings, delegate: delegate)
         }
     }
-    
+
     func getSession() -> AVCaptureSession {
         session
     }
@@ -119,5 +128,11 @@ final class CameraManager {
             }
         }
     }
-    
+}
+
+extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
+    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+        onVideoFrame?(pixelBuffer)
+    }
 }

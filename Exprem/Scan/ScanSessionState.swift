@@ -35,7 +35,9 @@ final class ScanSessionState {
         lastOCRError = nil
 
         do {
-            let imageData = image.jpegData(compressionQuality: 1.0) ?? Data()
+            guard let imageData = image.jpegData(compressionQuality: 1.0) else {
+                throw NSError(domain: "ScanSessionState", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to convert image to data"])
+            }
 
             let text = try await ocrService.extractText(from: imageData)
             cachedOCRText = text
@@ -66,7 +68,9 @@ final class ScanSessionState {
         lastOCRError = nil
 
         do {
-            let imageData = image.jpegData(compressionQuality: 1.0) ?? Data()
+            guard let imageData = image.jpegData(compressionQuality: 1.0) else {
+                throw NSError(domain: "ScanSessionState", code: 1, userInfo: [NSLocalizedDescriptionKey: "Failed to convert image to data"])
+            }
 
             let text = try await ocrService.extractText(from: imageData)
             cachedOCRText = text

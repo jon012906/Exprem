@@ -15,21 +15,21 @@ enum ProductInfoExtractorError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .emptyOCRText:
-            return "OCR Result empty!"
+            return "Teks hasil OCR kosong."
         case .productNameNotFound:
-            return "Product Named can't be read!"
+            return "Nama produk tidak terbaca, coba foto ulang."
         case .expiryDateNotFound:
-            return "Expired Date can't be read!"
+            return "Tanggal kedaluwarsa tidak terbaca, coba foto ulang."
         }
     }
 }
 
 final class FoundationProductInfoExtractor: ProductInfoExtracting {
     private let modelClient: FoundationModelPrompting?
-    private var lastExtraction: (key: String, name: String, expiryDate: Date?)?
+    private var lastExtraction: (key: String, name: String, expiryDate: String)?
 
     init(modelClient: FoundationModelPrompting? = nil) {
-        self.modelClient = modelClient
+        self.modelClient = modelClient ?? AppleFoundationModelsClient()
     }
 
     func extractProductName(from ocrText: String) async throws -> String {
@@ -40,96 +40,44 @@ final class FoundationProductInfoExtractor: ProductInfoExtracting {
         return result.name
     }
 
-    func extractExpiryDate(from ocrText: String) async throws -> Date {
+    func extractExpiryDate(from ocrText: String) async throws -> String {
         let normalized = ocrText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalized.isEmpty else { throw ProductInfoExtractorError.emptyOCRText }
         let result = await extractBoth(from: normalized)
-        guard let expiryDate = result.expiryDate else { throw ProductInfoExtractorError.expiryDateNotFound }
-        return expiryDate
+        guard !result.expiryDate.isEmpty else { throw ProductInfoExtractorError.expiryDateNotFound }
+        return result.expiryDate
     }
 
-    // MARK: - Core extraction
-
-    /// Returns partial results — either field may be empty.
-    /// Callers (extractProductName / extractExpiryDate) check their own field.
-    private func extractBoth(from ocrText: String) async -> (name: String, expiryDate: Date?) {
+    private func extractBoth(from ocrText: String) async -> (name: String, expiryDate: String) {
         if let cached = lastExtraction, cached.key == ocrText {
             return (cached.name, cached.expiryDate)
         }
 
-        // #2: Use y-position sections when available
         let (topText, bottomText) = splitSections(ocrText)
-        let nameSource = topText.isEmpty ? ocrText : topText
         let dateSource = bottomText.isEmpty ? ocrText : bottomText
 
-        // #3: Heuristic first — skip model when both are confident
-        var foundName = bestProductLine(from: nameSource)
-        var foundDate = highestDate(in: dateSource)
+        var foundDate = highestDateString(in: dateSource)
+        var foundName: String?
 
-        if foundName != nil && foundDate != nil {
-            let result = (name: foundName!, expiryDate: foundDate!)
-            cache(ocrText, name: result.name, expiryDate: result.expiryDate)
-            return result
-        }
-
-        // #4: Single model call for uncertain fields
         if let modelClient,
-           let response = try? await modelClient.respond(to: buildPrompt(topText: nameSource, bottomText: dateSource)) {
-            let parsed = parseResponse(response)
-            if foundName == nil { foundName = parsed.name }
-            if foundDate == nil {
-                foundDate = parsed.rawDate
-                    .flatMap(formatDateString)
-                    .flatMap(displayFormatter.date(from:))
+           let result = try? await modelClient.extract(from: ocrText) {
+            foundName = result.name
+            if foundDate == nil, let raw = result.expiryDate {
+                foundDate = formatDateString(raw) ?? raw
             }
         }
 
-        let result = (name: foundName ?? "", expiryDate: foundDate)
-        if !result.name.isEmpty || result.expiryDate != nil {
+        if foundName == nil {
+            let fallbackSource = topText.isEmpty ? ocrText : topText
+            foundName = bestProductLine(from: fallbackSource) ?? bestProductLine(from: ocrText)
+        }
+
+        let result = (name: foundName ?? "", expiryDate: foundDate ?? "")
+        if !result.name.isEmpty || !result.expiryDate.isEmpty {
             cache(ocrText, name: result.name, expiryDate: result.expiryDate)
         }
         return result
     }
-
-    // MARK: - Prompt
-
-    private func buildPrompt(topText: String, bottomText: String) -> String {
-        """
-        Dari OCR kemasan, ekstrak nama merek dan tanggal kedaluwarsa.
-
-        Bagian atas kemasan (nama produk):
-        \(topText)
-
-        Bagian bawah kemasan (tanggal):
-        \(bottomText)
-
-        Aturan nama: baris [MENONJOL] = prioritas. Kembalikan nama merek/produk utama (bukan produsen PT/CV/Ltd, regulasi BPOM/SNI, bentuk kapsul/tablet/sachet, atau deskripsi generik). Jika nama tersebar di beberapa baris [MENONJOL], gabungkan.
-
-        Aturan tanggal: cari kedaluwarsa (EXP/ED/BB/Best Before/Use Before/Kedaluwarsa). Format contoh: 17/12/2025 · 17 Des 2025 · DES 2025 · 12/2025 · EXP DATE: 02 2028. Abaikan tanggal produksi (MFG). Tahun 2 digit → +2000. Hanya bulan+tahun → gunakan 01. Tidak yakin → TIDAK_DITEMUKAN.
-
-        Jawab HANYA:
-        NAMA: ...
-        TANGGAL: dd/MM/yyyy atau TIDAK_DITEMUKAN
-        """
-    }
-
-    private func parseResponse(_ response: String) -> (name: String?, rawDate: String?) {
-        var name: String? = nil
-        var rawDate: String? = nil
-        for line in response.components(separatedBy: .newlines) {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("NAMA:") {
-                let value = String(trimmed.dropFirst("NAMA:".count)).trimmingCharacters(in: .whitespaces)
-                if !value.isEmpty { name = value }
-            } else if trimmed.hasPrefix("TANGGAL:") {
-                let value = String(trimmed.dropFirst("TANGGAL:".count)).trimmingCharacters(in: .whitespaces)
-                if value != "TIDAK_DITEMUKAN" && !value.isEmpty { rawDate = value }
-            }
-        }
-        return (name, rawDate)
-    }
-
-    // MARK: - Helpers
 
     private func splitSections(_ text: String) -> (top: String, bottom: String) {
         let parts = text.components(separatedBy: "\n[---]\n")
@@ -137,11 +85,9 @@ final class FoundationProductInfoExtractor: ProductInfoExtracting {
         return (parts[0], parts[1])
     }
 
-    private func cache(_ key: String, name: String, expiryDate: Date?) {
+    private func cache(_ key: String, name: String, expiryDate: String) {
         lastExtraction = (key: key, name: name, expiryDate: expiryDate)
     }
-
-    // MARK: - Heuristics
 
     private func bestProductLine(from text: String) -> String? {
         let blockedKeywords = [
@@ -158,17 +104,22 @@ final class FoundationProductInfoExtractor: ProductInfoExtracting {
 
         let rawLines = text.components(separatedBy: .newlines)
 
+        func stripAnnotations(_ line: String) -> String {
+            var t = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if t.hasPrefix("[MENONJOL] ") {
+                t = String(t.dropFirst("[MENONJOL] ".count))
+            }
+            if let altRange = t.range(of: " | alt: ") {
+                t = String(t[..<altRange.lowerBound])
+            }
+            return t.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
         let prominent = rawLines
             .filter { $0.hasPrefix("[MENONJOL] ") }
-            .map { String($0.dropFirst("[MENONJOL] ".count)).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .map(stripAnnotations)
 
-        let all = rawLines
-            .map { line -> String in
-                let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-                return trimmed.hasPrefix("[MENONJOL] ")
-                    ? String(trimmed.dropFirst("[MENONJOL] ".count))
-                    : trimmed
-            }
+        let all = rawLines.map(stripAnnotations)
 
         func passes(_ line: String) -> Bool {
             guard (3...40).contains(line.count) else { return false }
@@ -189,6 +140,11 @@ final class FoundationProductInfoExtractor: ProductInfoExtracting {
             return "\(candidates[0]) \(candidates[1])"
         }
         return candidates.first
+    }
+
+    private func highestDateString(in text: String) -> String? {
+        guard let date = highestDate(in: text) else { return nil }
+        return displayFormatter.string(from: date)
     }
 
     private func highestDate(in text: String) -> Date? {
@@ -340,11 +296,4 @@ final class FoundationProductInfoExtractor: ProductInfoExtracting {
         formatter.timeZone = TimeZone(secondsFromGMT: 0)
         return formatter
     }()
-}
-
-private extension String {
-    var cleanedSingleLine: String {
-        replacingOccurrences(of: "\n", with: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
 }

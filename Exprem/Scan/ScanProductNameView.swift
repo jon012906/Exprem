@@ -4,6 +4,7 @@
 //
 //  Created by Jon on 12/04/26.
 //
+
 import SwiftUI
 import UIKit
 
@@ -12,27 +13,36 @@ struct ScanProductNameView: View {
     @Binding var draft: ProductDraft
 
     @Environment(\.appTheme) private var theme
-    @State private var session = ScanSessionState()
     @State private var cameraVM = CameraViewModel()
     @State private var showManualInput = false
     @State private var showScanExpiry = false
     @State private var showNotDetectedAlert = false
     @State private var detectedName: String? = nil
+    @State private var isProcessingCapture = false
 
     var body: some View {
         ZStack {
-
             VStack(spacing: 0) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .fill(theme.appSurfaceMuted)
 
-                    CameraPreview(session: cameraVM.getSession())
-                        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                        .contentShape(Rectangle())
-                        .onTapGesture { location in
-                            cameraVM.focusAt(point: location)
+                    CameraPreview(
+                        session: cameraVM.getSession(),
+                        lockedRegion: cameraVM.lockedRegion,
+                        allCandidates: cameraVM.candidateRegions,
+                        onRegionTapped: { region in
+                            cameraVM.lockRegion(region)
+                        },
+                        onTap: { point in
+                            cameraVM.focusAt(point: point)
                         }
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .contentShape(Rectangle())
+                    .onTapGesture { location in
+                        cameraVM.focusAt(point: location)
+                    }
 
                     scanBorderOverlay
 
@@ -40,11 +50,13 @@ struct ScanProductNameView: View {
                         permissionOverlay
                     }
 
-                    if session.isProcessingOCR {
+                    if isProcessingCapture {
                         processingOverlay
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(height: 400)
+
+                liveDetectedPanel
 
                 Button {
                     showManualInput = true
@@ -66,6 +78,7 @@ struct ScanProductNameView: View {
                 .padding(.horizontal, 8)
 
                 captureBar {
+                    isProcessingCapture = true
                     cameraVM.capture()
                 }
             }
@@ -74,6 +87,7 @@ struct ScanProductNameView: View {
             .padding(.bottom, 10)
         }
         .onAppear {
+            cameraVM.currentStep = .productName
             cameraVM.setup()
         }
         .onDisappear {
@@ -82,12 +96,16 @@ struct ScanProductNameView: View {
         .onChange(of: cameraVM.isCaptured) { isCaptured in
             guard isCaptured else { return }
             guard let image = cameraVM.image else { return }
-            session.storeCapturedImage(image)
-//            cameraVM.retake()
+            isProcessingCapture = false
 
             Task {
                 defer { cameraVM.retake() }
-                if let name = await session.processAndExtractName() {
+                let ocrService = VisionOCRService()
+                let extractor = FoundationProductInfoExtractor()
+
+                if let imageData = image.jpegData(compressionQuality: 1.0),
+                   let text = try? await ocrService.extractText(from: imageData),
+                   let name = try? await extractor.extractProductName(from: text) {
                     await MainActor.run {
                         detectedName = name
                     }
@@ -116,7 +134,6 @@ struct ScanProductNameView: View {
             Button("Continue") {
                 if let name = detectedName {
                     draft.nameProduct = name
-                    draft.thumbnailData = session.getThumbnailData()
                     detectedName = nil
                     showScanExpiry = true
                 }
@@ -132,6 +149,27 @@ struct ScanProductNameView: View {
         }
     }
 
+    private var liveDetectedPanel: some View {
+        VStack(spacing: 8) {
+            if let name = cameraVM.liveDetectedProductName {
+                Text(name)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(theme.appTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .padding(.vertical, 8)
+            } else {
+                Text("Point camera at product name")
+                    .font(.subheadline)
+                    .foregroundStyle(theme.appTextSecondary)
+                    .padding(.vertical, 8)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 12)
+    }
+
+    @ViewBuilder
     private func captureBar(action: @escaping () -> Void) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 24, style: .continuous)

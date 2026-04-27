@@ -14,12 +14,12 @@ struct ScanProductExpiryView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appTheme) private var theme
-    @State private var session = ScanSessionState()
     @State private var cameraVM = CameraViewModel()
     @State private var showManualExpiry = false
     @State private var showAddProduct = false
     @State private var showNotDetectedAlert = false
     @State private var detectedExpiry: Date? = nil
+    @State private var isProcessingCapture = false
 
     var body: some View {
         ZStack {
@@ -28,12 +28,22 @@ struct ScanProductExpiryView: View {
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .fill(theme.appSurfaceMuted)
 
-                    CameraPreview(session: cameraVM.getSession())
-                        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-                        .contentShape(Rectangle())
-                        .onTapGesture { location in
-                            cameraVM.focusAt(point: location)
+                    CameraPreview(
+                        session: cameraVM.getSession(),
+                        lockedRegion: cameraVM.lockedRegion,
+                        allCandidates: cameraVM.candidateRegions,
+                        onRegionTapped: { region in
+                            cameraVM.lockRegion(region)
+                        },
+                        onTap: { point in
+                            cameraVM.focusAt(point: point)
                         }
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+                    .contentShape(Rectangle())
+                    .onTapGesture { location in
+                        cameraVM.focusAt(point: location)
+                    }
 
                     scanBorderOverlay
 
@@ -41,11 +51,13 @@ struct ScanProductExpiryView: View {
                         permissionOverlay
                     }
 
-                    if session.isProcessingOCR {
+                    if isProcessingCapture {
                         processingOverlay
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(height: 400)
+
+                liveDetectedPanel
 
                 Button {
                     showManualExpiry = true
@@ -67,6 +79,7 @@ struct ScanProductExpiryView: View {
                 .padding(.horizontal, 8)
 
                 captureBar {
+                    isProcessingCapture = true
                     cameraVM.capture()
                 }
             }
@@ -75,6 +88,7 @@ struct ScanProductExpiryView: View {
             .padding(.bottom, 10)
         }
         .onAppear {
+            cameraVM.currentStep = .expiryDate
             cameraVM.setup()
         }
         .onDisappear {
@@ -83,13 +97,19 @@ struct ScanProductExpiryView: View {
         .onChange(of: cameraVM.isCaptured) { isCaptured in
             guard isCaptured else { return }
             guard let image = cameraVM.image else { return }
-            session.storeCapturedImage(image)
+            isProcessingCapture = false
 
             Task {
                 defer { cameraVM.retake() }
-                if let expiryDate = await session.extractExpiryDate() {
+                let ocrService = VisionOCRService()
+                let extractor = FoundationProductInfoExtractor()
+
+                if let imageData = image.jpegData(compressionQuality: 1.0),
+                   let text = try? await ocrService.extractText(from: imageData),
+                   let dateString = try? await extractor.extractExpiryDate(from: text),
+                   let date = parseDate(from: dateString) {
                     await MainActor.run {
-                        detectedExpiry = expiryDate
+                        detectedExpiry = date
                     }
                 } else {
                     await MainActor.run {
@@ -116,10 +136,6 @@ struct ScanProductExpiryView: View {
             Button("Continue") {
                 guard let expiry = detectedExpiry else { return }
                 draft.expiryDate = expiry
-                if draft.thumbnailData == nil {
-                    draft.thumbnailData = session.getThumbnailData()
-                }
-                session.clearCachedText()
                 detectedExpiry = nil
                 if origin == .onboarding {
                     showAddProduct = true
@@ -138,6 +154,35 @@ struct ScanProductExpiryView: View {
         .navigationDestination(isPresented: $showAddProduct) {
             AddProductView(draft: draft)
         }
+    }
+
+    private func parseDate(from string: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "id_ID")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.dateFormat = "dd/MM/yyyy"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        return formatter.date(from: string)
+    }
+
+    private var liveDetectedPanel: some View {
+        VStack(spacing: 8) {
+            if let dateString = cameraVM.liveDetectedExpiryDate {
+                Text(dateString)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(theme.appTextPrimary)
+                    .multilineTextAlignment(.center)
+                    .padding(.vertical, 8)
+            } else {
+                Text("Point camera at expiry date")
+                    .font(.subheadline)
+                    .foregroundStyle(theme.appTextSecondary)
+                    .padding(.vertical, 8)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 12)
     }
 
     @ViewBuilder
