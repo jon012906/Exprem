@@ -18,6 +18,8 @@ struct ScanProductNameView: View {
     @State private var showScanExpiry = false
     @State private var showNotDetectedAlert = false
     @State private var detectedName: String? = nil
+    @State private var focusIndicatorPoint: CGPoint?
+    @State private var focusPulse: Bool = false
 
     var body: some View {
         ZStack {
@@ -27,12 +29,22 @@ struct ScanProductNameView: View {
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .fill(theme.appSurfaceMuted)
 
-                    CameraPreview(session: cameraVM.getSession())
+                    CameraPreview(session: cameraVM.getSession()) { normalizedPoint, viewPoint in
+                        cameraVM.focusAt(point: normalizedPoint)
+                        focusIndicatorPoint = viewPoint
+                        focusPulse = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+                            focusIndicatorPoint = nil
+                        }
+                    }
                         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                         .contentShape(Rectangle())
-                        .onTapGesture { location in
-                            cameraVM.focusAt(point: location)
-                        }
+
+                    livePreviewOverlay
+
+                    if let point = focusIndicatorPoint {
+                        focusIndicator(at: point)
+                    }
 
                     scanBorderOverlay
 
@@ -44,7 +56,8 @@ struct ScanProductNameView: View {
                         processingOverlay
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity)
+                .frame(height: min(UIScreen.main.bounds.height * 0.56, 420))
 
                 Button {
                     showManualInput = true
@@ -78,6 +91,12 @@ struct ScanProductNameView: View {
         }
         .onDisappear {
             cameraVM.stop()
+        }
+        .onChange(of: cameraVM.livePreviewText) { _ in
+            guard focusIndicatorPoint != nil else { return }
+            withAnimation(.easeOut(duration: 0.18)) {
+                focusPulse.toggle()
+            }
         }
         .onChange(of: cameraVM.isCaptured) { isCaptured in
             guard isCaptured else { return }
@@ -170,6 +189,46 @@ struct ScanProductNameView: View {
                     .stroke(.white.opacity(0.45), lineWidth: 1)
                     .padding(8)
             }
+    }
+
+    private var livePreviewOverlay: some View {
+        VStack {
+            if !cameraVM.livePreviewText.isEmpty {
+                Text(cameraVM.livePreviewText)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(theme.appTextPrimary)
+                    .lineLimit(2)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(theme.appBorder.opacity(0.85), lineWidth: 0.8)
+                    }
+                    .padding(.top, 14)
+                    .padding(.horizontal, 16)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+            Spacer()
+        }
+        .animation(.easeInOut(duration: 0.22), value: cameraVM.livePreviewText)
+    }
+
+    private func focusIndicator(at point: CGPoint) -> some View {
+        Circle()
+            .stroke(theme.appBlue.opacity(0.95), lineWidth: 2.2)
+            .frame(width: 72, height: 72)
+            .overlay {
+                Circle()
+                    .stroke(.white.opacity(0.6), lineWidth: 1)
+                    .padding(8)
+            }
+            .scaleEffect(focusPulse ? 1 : 0.82)
+            .opacity(focusPulse ? 0.2 : 1)
+            .position(point)
+            .allowsHitTesting(false)
+            .animation(.easeOut(duration: 0.55), value: focusPulse)
     }
 
     private var permissionOverlay: some View {
