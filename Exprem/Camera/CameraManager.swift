@@ -95,5 +95,29 @@ final class CameraManager {
     func getSession() -> AVCaptureSession {
         session
     }
+
+    func focusAt(point: CGPoint) {
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else { return }
+
+        sessionQueue.async {
+            do {
+                try device.lockForConfiguration()
+
+                if device.isFocusPointOfInterestSupported {
+                    device.focusPointOfInterest = point
+                    device.focusMode = .autoFocus
+                }
+
+                if device.isExposurePointOfInterestSupported {
+                    device.exposurePointOfInterest = point
+                    device.exposureMode = .autoExpose
+                }
+
+                device.unlockForConfiguration()
+            } catch {
+                print("Focus failed: \(error)")
+            }
+        }
+    }
     
 }

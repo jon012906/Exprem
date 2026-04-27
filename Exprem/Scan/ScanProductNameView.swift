@@ -18,8 +18,6 @@ struct ScanProductNameView: View {
     @State private var showScanExpiry = false
     @State private var showNotDetectedAlert = false
     @State private var detectedName: String? = nil
-    @State private var focusPosition: CGPoint? = nil
-    @State private var focusSize: CGFloat = 150
 
     var body: some View {
         ZStack {
@@ -33,13 +31,10 @@ struct ScanProductNameView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                         .contentShape(Rectangle())
                         .onTapGesture { location in
-                            focusPosition = location
-                            session.storeFocusPosition(location)
+                            cameraVM.focusAt(point: location)
                         }
 
-                    if let position = focusPosition {
-                        focusBoxOverlay(at: position)
-                    }
+                    scanBorderOverlay
 
                     if cameraVM.permissionDenied {
                         permissionOverlay
@@ -175,21 +170,6 @@ struct ScanProductNameView: View {
                     .stroke(.white.opacity(0.45), lineWidth: 1)
                     .padding(8)
             }
-    }
-
-    private func focusBoxOverlay(at position: CGPoint) -> some View {
-        let boxSize = focusSize
-
-        ZStack {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(theme.appBlue, lineWidth: 3)
-                .frame(width: boxSize, height: boxSize)
-
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(theme.appBlue.opacity(0.15))
-                .frame(width: boxSize, height: boxSize)
-        }
-        .position(x: position.x, y: position.y)
     }
 
     private var permissionOverlay: some View {

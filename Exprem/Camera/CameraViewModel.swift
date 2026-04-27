@@ -70,4 +70,8 @@ final class CameraViewModel {
     func getSession() -> AVCaptureSession {
         manager.getSession()
     }
+
+    func focusAt(point: CGPoint) {
+        manager.focusAt(point: point)
+    }
 }

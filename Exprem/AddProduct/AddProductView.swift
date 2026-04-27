@@ -80,14 +80,14 @@ struct AddProductView: View {
                                 .font(.body)
                                 .multilineTextAlignment(.trailing)
 
-                            Button {
-                                syncDraftFromForm()
-                                showScanName = true
-                            } label: {
-                                Image(systemName: "camera.viewfinder")
-                                    .font(.headline)
-                                    .foregroundStyle(theme.appBlue)
-                            }
+//                            Button {
+//                                syncDraftFromForm()
+//                                showScanName = true
+//                            } label: {
+//                                Image(systemName: "camera.viewfinder")
+//                                    .font(.headline)
+//                                    .foregroundStyle(theme.appBlue)
+//                            }
                         }
 
                         Divider()
@@ -96,14 +96,14 @@ struct AddProductView: View {
                             DatePicker("Expiry Date", selection: $expiryDate, displayedComponents: .date)
                                 .foregroundStyle(theme.appPlaceholder)
 
-                            Button {
-                                syncDraftFromForm()
-                                showScanExpiry = true
-                            } label: {
-                                Image(systemName: "camera.viewfinder")
-                                    .font(.headline)
-                                    .foregroundStyle(theme.appBlue)
-                            }
+//                            Button {
+//                                syncDraftFromForm()
+//                                showScanExpiry = true
+//                            } label: {
+//                                Image(systemName: "camera.viewfinder")
+//                                    .font(.headline)
+//                                    .foregroundStyle(theme.appBlue)
+//                            }
                         }
                     }
                     .padding(.vertical, 2)

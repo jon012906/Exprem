@@ -20,8 +20,6 @@ struct ScanProductExpiryView: View {
     @State private var showAddProduct = false
     @State private var showNotDetectedAlert = false
     @State private var detectedExpiry: Date? = nil
-    @State private var focusPosition: CGPoint? = nil
-    @State private var focusSize: CGFloat = 150
 
     var body: some View {
         ZStack {
@@ -34,13 +32,8 @@ struct ScanProductExpiryView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                         .contentShape(Rectangle())
                         .onTapGesture { location in
-                            focusPosition = location
-                            session.storeFocusPosition(location)
+                            cameraVM.focusAt(point: location)
                         }
-
-                    if let position = focusPosition {
-                        focusBoxOverlay(at: position)
-                    }
 
                     scanBorderOverlay
 
@@ -172,36 +165,7 @@ struct ScanProductExpiryView: View {
             .buttonStyle(.plain)
             .disabled(cameraVM.permissionDenied)
             .opacity(cameraVM.permissionDenied ? 0.5 : 1)
-        }
-        .frame(height: 108)
-        .padding(.top, 10)
-    }
-
-    private var scanBorderOverlay: some View {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .stroke(theme.appBlue.opacity(0.95), lineWidth: 5)
-            .frame(width: 220, height: 220)
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(.white.opacity(0.45), lineWidth: 1)
-                    .padding(8)
-            }
-    }
-
-    private func focusBoxOverlay(at position: CGPoint) -> some View {
-        let boxSize = focusSize
-
-        ZStack {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(theme.appBlue, lineWidth: 3)
-                .frame(width: boxSize, height: boxSize)
-
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(theme.appBlue.opacity(0.15))
-                .frame(width: boxSize, height: boxSize)
-        }
-        .position(x: position.x, y: position.y)
-    }
+}
 
     private var permissionOverlay: some View {
         VStack(spacing: 10) {
