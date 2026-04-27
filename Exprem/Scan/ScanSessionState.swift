@@ -35,7 +35,8 @@ final class ScanSessionState {
         lastOCRError = nil
 
         do {
-            let imageData = image.jpegData(compressionQuality: 1.0) ?? Data()
+            let imageForOCR = cropToScanRegion(image) ?? image
+            let imageData = imageForOCR.jpegData(compressionQuality: 1.0) ?? Data()
 
             let text = try await ocrService.extractText(from: imageData)
             cachedOCRText = text
@@ -66,7 +67,8 @@ final class ScanSessionState {
         lastOCRError = nil
 
         do {
-            let imageData = image.jpegData(compressionQuality: 1.0) ?? Data()
+            let imageForOCR = cropToScanRegion(image) ?? image
+            let imageData = imageForOCR.jpegData(compressionQuality: 1.0) ?? Data()
 
             let text = try await ocrService.extractText(from: imageData)
             cachedOCRText = text
@@ -123,5 +125,22 @@ final class ScanSessionState {
         }
 
         return resized.jpegData(compressionQuality: 0.72)
+    }
+
+    private func cropToScanRegion(_ image: UIImage) -> UIImage? {
+        guard let cgImage = image.cgImage else { return nil }
+
+        let width = CGFloat(cgImage.width)
+        let height = CGFloat(cgImage.height)
+        let size = CGSize(width: width, height: height)
+        var cropRect = ScanRegion.rect(in: size).integral
+
+        cropRect.origin.x = max(0, min(cropRect.origin.x, width - 1))
+        cropRect.origin.y = max(0, min(cropRect.origin.y, height - 1))
+        cropRect.size.width = max(1, min(cropRect.size.width, width - cropRect.origin.x))
+        cropRect.size.height = max(1, min(cropRect.size.height, height - cropRect.origin.y))
+
+        guard let cropped = cgImage.cropping(to: cropRect) else { return nil }
+        return UIImage(cgImage: cropped, scale: image.scale, orientation: image.imageOrientation)
     }
 }

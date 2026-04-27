@@ -19,7 +19,7 @@ final class CameraManager: NSObject {
     
     private var isConfigured = false
     private var isPerformingLiveOCR = false
-    private var activeROIRect: CGRect?
+    private var hasUserFocused = false
     private var lastLiveOCRTime: CFAbsoluteTime = 0
     private let liveOCRInterval: CFAbsoluteTime = 0.35
     
@@ -88,7 +88,7 @@ final class CameraManager: NSObject {
                 self.session.stopRunning()
             }
             self.isPerformingLiveOCR = false
-            self.activeROIRect = nil
+            self.hasUserFocused = false
             DispatchQueue.main.async {
                 self.onLiveTextPreview?("")
             }
@@ -128,7 +128,7 @@ final class CameraManager: NSObject {
         guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else { return }
 
         sessionQueue.async {
-            self.activeROIRect = self.makeROIRect(around: point)
+            self.hasUserFocused = true
             do {
                 try device.lockForConfiguration()
 
@@ -147,14 +147,6 @@ final class CameraManager: NSObject {
                 print("Focus failed: \(error)")
             }
         }
-    }
-
-    private func makeROIRect(around point: CGPoint) -> CGRect {
-        let width: CGFloat = 0.36
-        let height: CGFloat = 0.22
-        let x = max(0, min(1 - width, point.x - (width / 2)))
-        let y = max(0, min(1 - height, point.y - (height / 2)))
-        return CGRect(x: x, y: y, width: width, height: height)
     }
 
     private func recognizeTopText(in pixelBuffer: CVPixelBuffer, regionOfInterest: CGRect) -> String {
@@ -202,7 +194,7 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
     ) {
         guard output === videoOutput else { return }
         guard session.isRunning else { return }
-        guard let roi = activeROIRect else { return }
+        guard hasUserFocused else { return }
         guard !isPerformingLiveOCR else { return }
 
         let now = CFAbsoluteTimeGetCurrent()
@@ -212,7 +204,7 @@ extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
         isPerformingLiveOCR = true
-        let text = recognizeTopText(in: pixelBuffer, regionOfInterest: roi)
+        let text = recognizeTopText(in: pixelBuffer, regionOfInterest: ScanRegion.normalizedRect)
         isPerformingLiveOCR = false
 
         DispatchQueue.main.async {

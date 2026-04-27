@@ -47,6 +47,8 @@ struct ScanProductExpiryView: View {
                         focusIndicator(at: point)
                     }
 
+                    scanMaskOverlay
+
                     scanBorderOverlay
 
                     if cameraVM.permissionDenied {
@@ -190,14 +192,31 @@ struct ScanProductExpiryView: View {
     }
 
     private var scanBorderOverlay: some View {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .stroke(theme.appBlue.opacity(0.95), lineWidth: 5)
-            .frame(width: 220, height: 220)
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(.white.opacity(0.45), lineWidth: 1)
-                    .padding(8)
+        GeometryReader { proxy in
+            let rect = ScanRegion.rect(in: proxy.size)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(theme.appBlue.opacity(0.95), lineWidth: 5)
+                .frame(width: rect.width, height: rect.height)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(.white.opacity(0.45), lineWidth: 1)
+                        .padding(8)
+                }
+                .position(x: rect.midX, y: rect.midY)
+        }
+        .allowsHitTesting(false)
+    }
+
+    private var scanMaskOverlay: some View {
+        GeometryReader { proxy in
+            let rect = ScanRegion.rect(in: proxy.size)
+            Path { path in
+                path.addRect(CGRect(origin: .zero, size: proxy.size))
+                path.addRoundedRect(in: rect, cornerSize: CGSize(width: 18, height: 18))
             }
+            .fill(.black.opacity(0.23), style: FillStyle(eoFill: true))
+        }
+        .allowsHitTesting(false)
     }
 
     private var livePreviewOverlay: some View {
@@ -208,7 +227,7 @@ struct ScanProductExpiryView: View {
                     .foregroundStyle(theme.appTextPrimary)
                     .lineLimit(2)
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 12)
                     .background(.ultraThinMaterial)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay {
