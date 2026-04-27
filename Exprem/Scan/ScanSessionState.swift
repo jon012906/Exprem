@@ -75,7 +75,8 @@ final class ScanSessionState {
             let text = try await ocrService.extractText(from: imageData)
             cachedOCRText = text
 
-            let expiryDate = try await infoExtractor.extractExpiryDate(from: text)
+            let dateString = try await infoExtractor.extractExpiryDate(from: text)
+            let expiryDate = parseDate(from: dateString)
 
             if thumbnailDataCache == nil {
                 thumbnailDataCache = makeThumbnailData(from: image)
@@ -127,5 +128,14 @@ final class ScanSessionState {
         }
 
         return resized.jpegData(compressionQuality: 0.72)
+    }
+
+    private func parseDate(from string: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "id_ID")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.dateFormat = "dd/MM/yyyy"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        return formatter.date(from: string)
     }
 }
