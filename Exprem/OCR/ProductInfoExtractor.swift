@@ -249,8 +249,31 @@ final class FoundationProductInfoExtractor: ProductInfoExtracting {
             .filter { !$0.isEmpty }
             .joined(separator: " ")
 
-        for formatter in monthNameFormatters {
+        let numericTokens = normalized
+            .components(separatedBy: CharacterSet.decimalDigits.inverted)
+            .filter { !$0.isEmpty }
+        let yearToken = numericTokens.last(where: { $0.count == 2 || $0.count == 4 })
+        let usesTwoDigitYear = yearToken?.count == 2
+
+        let formatters = usesTwoDigitYear ? monthNameYYFormatters : monthNameYYYYFormatters
+
+        for formatter in formatters {
             if let date = formatter.date(from: normalized) {
+                guard usesTwoDigitYear,
+                      let yearToken,
+                      let yearRaw = Int(yearToken)
+                else {
+                    return date
+                }
+
+                let normalizedYear = yearRaw >= 70 ? 1900 + yearRaw : 2000 + yearRaw
+                let calendar = Calendar(identifier: .gregorian)
+                var components = calendar.dateComponents([.day, .month], from: date)
+                components.year = normalizedYear
+                components.timeZone = TimeZone(secondsFromGMT: 0)
+                if let normalizedDate = calendar.date(from: components) {
+                    return normalizedDate
+                }
                 return date
             }
         }
@@ -310,12 +333,32 @@ final class FoundationProductInfoExtractor: ProductInfoExtracting {
         }
     }()
 
-    private let monthNameFormatters: [DateFormatter] = {
+    private let monthNameYYYYFormatters: [DateFormatter] = {
         let locales = [Locale(identifier: "id_ID"), Locale(identifier: "en_US_POSIX")]
         let formats = [
             "dd MMM yyyy", "d MMM yyyy", "dd MMMM yyyy", "d MMMM yyyy",
+            "MMM yyyy", "MMMM yyyy"
+        ]
+        let defaultDate = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2000, month: 1, day: 1))
+
+        return locales.flatMap { locale in
+            formats.map { format in
+                let formatter = DateFormatter()
+                formatter.locale = locale
+                formatter.calendar = Calendar(identifier: .gregorian)
+                formatter.dateFormat = format
+                formatter.timeZone = TimeZone(secondsFromGMT: 0)
+                formatter.defaultDate = defaultDate
+                return formatter
+            }
+        }
+    }()
+
+    private let monthNameYYFormatters: [DateFormatter] = {
+        let locales = [Locale(identifier: "id_ID"), Locale(identifier: "en_US_POSIX")]
+        let formats = [
             "dd MMM yy", "d MMM yy", "dd MMMM yy", "d MMMM yy",
-            "MMM yyyy", "MMMM yyyy", "MMM yy", "MMMM yy"
+            "MMM yy", "MMMM yy"
         ]
         let defaultDate = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2000, month: 1, day: 1))
 
