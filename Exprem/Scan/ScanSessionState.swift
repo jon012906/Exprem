@@ -20,14 +20,19 @@ final class ScanSessionState {
     private let infoExtractor = FoundationProductInfoExtractor()
 
     private var thumbnailDataCache: Data?
+    var focusPosition: CGPoint?
+    var focusSize: CGFloat = 150
 
     func storeCapturedImage(_ image: UIImage) {
         originalImage = image
     }
 
+    func storeFocusPosition(_ position: CGPoint?) {
+        focusPosition = position
+    }
+
     func processAndExtractName() async -> String? {
-        guard let image = originalImage,
-              let imageData = image.jpegData(compressionQuality: 1.0) else {
+        guard let image = originalImage else {
             lastOCRError = "No image to process"
             return nil
         }
@@ -36,6 +41,18 @@ final class ScanSessionState {
         lastOCRError = nil
 
         do {
+            let imageData: Data
+
+            if let focus = focusPosition {
+                if let cropped = cropImage(image, toRectAt: focus) {
+                    imageData = cropped.jpegData(compressionQuality: 1.0) ?? image.jpegData(compressionQuality: 1.0)!
+                } else {
+                    imageData = image.jpegData(compressionQuality: 1.0)!
+                }
+            } else {
+                imageData = image.jpegData(compressionQuality: 1.0)!
+            }
+
             let text = try await ocrService.extractText(from: imageData)
             cachedOCRText = text
 
@@ -56,40 +73,61 @@ final class ScanSessionState {
     }
 
     func extractExpiryDate() async -> Date? {
-        guard let text = cachedOCRText else {
-            if let image = originalImage,
-               let imageData = image.jpegData(compressionQuality: 1.0) {
-                isProcessingOCR = true
-                lastOCRError = nil
-                do {
-                    let text = try await ocrService.extractText(from: imageData)
-                    cachedOCRText = text
-
-                    let expiryDate = try await infoExtractor.extractExpiryDate(from: text)
-
-                    if thumbnailDataCache == nil, let image = originalImage {
-                        thumbnailDataCache = makeThumbnailData(from: image)
-                    }
-
-                    releaseOriginalImage()
-                    clearCachedText()
-
-                    isProcessingOCR = false
-                    return expiryDate
-                } catch {
-                    lastOCRError = error.localizedDescription
-                    isProcessingOCR = false
-                    return nil
-                }
-            }
+        guard let image = originalImage else {
+            lastOCRError = "No image to process"
             return nil
         }
 
         isProcessingOCR = true
+        lastOCRError = nil
+
         do {
+            let imageData: Data
+
+            if let focus = focusPosition {
+                if let cropped = cropImage(image, toRectAt: focus) {
+                    imageData = cropped.jpegData(compressionQuality: 1.0) ?? image.jpegData(compressionQuality: 1.0)!
+                } else {
+                    imageData = image.jpegData(compressionQuality: 1.0)!
+                }
+            } else {
+                imageData = image.jpegData(compressionQuality: 1.0)!
+            }
+
+            let text = try await ocrService.extractText(from: imageData)
+            cachedOCRText = text
+
             let expiryDate = try await infoExtractor.extractExpiryDate(from: text)
 
-            if thumbnailDataCache == nil, let image = originalImage {
+            if thumbnailDataCache == nil {
+                thumbnailDataCache = makeThumbnailData(from: image)
+            }
+
+            releaseOriginalImage()
+            clearCachedText()
+
+            isProcessingOCR = false
+            return expiryDate
+        } catch {
+            lastOCRError = error.localizedDescription
+            isProcessingOCR = false
+            return nil
+        }
+    }
+
+    private func cropImage(_ image: UIImage, toRectAt focus: CGPoint) -> UIImage? {
+        guard let cgImage = image.cgImage else { return nil }
+
+        let halfSize = focusSize / 2
+        let x = focus.x - halfSize
+        let y = focus.y - halfSize
+
+        let cropRect = CGRect(x: x, y: y, width: focusSize, height: focusSize)
+
+        guard let cropped = cgImage.cropping(to: cropRect) else { return nil }
+
+        return UIImage(cgImage: cropped, scale: image.scale, orientation: image.imageOrientation)
+    }
                 thumbnailDataCache = makeThumbnailData(from: image)
             }
 
