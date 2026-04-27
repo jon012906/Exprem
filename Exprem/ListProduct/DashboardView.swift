@@ -76,6 +76,16 @@ struct DashboardView: View {
                             .multilineTextAlignment(.leading)
                             .padding(.leading, 16)
                         Spacer()
+                        Button {
+                            Task {
+                                _ = await scheduler.fireTestNotification(products: products)
+                            }
+                        } label: {
+                            Image(systemName: "bell.badge")
+                                .font(.title3)
+                                .foregroundStyle(theme.appBlue)
+                        }
+                        .padding(.trailing, 16)
                     }
                     HStack{
                         Text(subHeaderText[0])
