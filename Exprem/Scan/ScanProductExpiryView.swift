@@ -84,7 +84,6 @@ struct ScanProductExpiryView: View {
             guard isCaptured else { return }
             guard let image = cameraVM.image else { return }
             session.storeCapturedImage(image)
-//            cameraVM.retake()
 
             Task {
                 defer { cameraVM.retake() }
@@ -141,6 +140,7 @@ struct ScanProductExpiryView: View {
         }
     }
 
+    @ViewBuilder
     private func captureBar(action: @escaping () -> Void) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -165,7 +165,21 @@ struct ScanProductExpiryView: View {
             .buttonStyle(.plain)
             .disabled(cameraVM.permissionDenied)
             .opacity(cameraVM.permissionDenied ? 0.5 : 1)
-}
+        }
+        .frame(height: 108)
+        .padding(.top, 10)
+    }
+
+    private var scanBorderOverlay: some View {
+        RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .stroke(theme.appBlue.opacity(0.95), lineWidth: 5)
+            .frame(width: 220, height: 220)
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(.white.opacity(0.45), lineWidth: 1)
+                    .padding(8)
+            }
+    }
 
     private var permissionOverlay: some View {
         VStack(spacing: 10) {
