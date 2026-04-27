@@ -18,12 +18,19 @@ final class CameraViewModel {
     var isCaptured: Bool = false
     var permissionDenied: Bool = false
     var errorMessage: String?
+    var livePreviewText: String = ""
     
     init(){
         manager.onPhotoCaptured = { [weak self] image in
             Task { @MainActor in
                 self?.image = image
                 self?.isCaptured = true
+            }
+        }
+
+        manager.onLiveTextPreview = { [weak self] text in
+            Task { @MainActor in
+                self?.livePreviewText = text
             }
         }
     }
@@ -65,6 +72,10 @@ final class CameraViewModel {
     func retake() {
         image = nil
         isCaptured = false
+    }
+
+    func clearLivePreviewText() {
+        livePreviewText = ""
     }
     
     func getSession() -> AVCaptureSession {
