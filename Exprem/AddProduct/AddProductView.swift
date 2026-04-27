@@ -79,15 +79,6 @@ struct AddProductView: View {
                             TextField("Name", text: $name)
                                 .font(.body)
                                 .multilineTextAlignment(.trailing)
-
-//                            Button {
-//                                syncDraftFromForm()
-//                                showScanName = true
-//                            } label: {
-//                                Image(systemName: "camera.viewfinder")
-//                                    .font(.headline)
-//                                    .foregroundStyle(theme.appBlue)
-//                            }
                         }
 
                         Divider()
@@ -95,15 +86,6 @@ struct AddProductView: View {
                         HStack(spacing: 8) {
                             DatePicker("Expiry Date", selection: $expiryDate, displayedComponents: .date)
                                 .foregroundStyle(theme.appPlaceholder)
-
-//                            Button {
-//                                syncDraftFromForm()
-//                                showScanExpiry = true
-//                            } label: {
-//                                Image(systemName: "camera.viewfinder")
-//                                    .font(.headline)
-//                                    .foregroundStyle(theme.appBlue)
-//                            }
                         }
                     }
                     .padding(.vertical, 2)
