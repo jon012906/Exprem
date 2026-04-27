@@ -37,8 +37,12 @@ final class NotificationScheduler {
         // Generate (fireDate, product, phase) tuples for all products
         var all: [NotificationCandidate] = []
         for product in products {
-            all += fireDates(for: product)
+            let candidates = fireDates(for: product)
+            print("[DEBUG] scheduleAll: product=\(product.nameProduct), candidates.count=\(candidates.count)")
+            all += candidates
         }
+
+        print("[DEBUG] scheduleAll: total candidates=\(all.count)")
 
         // Priority: phase 4 > 3 > 2 > 1, then chronological
         all.sort {
@@ -47,9 +51,11 @@ final class NotificationScheduler {
         }
 
         let grouped = groupedNotifications(from: all)
+        print("[DEBUG] scheduleAll: grouped count=\(grouped.count)")
 
         // Respect iOS 64-notification limit
         let capped = Array(grouped.prefix(64))
+        print("[DEBUG] scheduleAll: scheduling \(capped.count) notifications")
 
         for group in capped {
             schedule(group: group)
@@ -74,15 +80,20 @@ final class NotificationScheduler {
 
         var results: [NotificationCandidate] = []
 
+        // Phase 4 — always fire regardless of reminder settings
+        for offset in [-7, -6, -4, -2, -1] {
+            guard let date = Calendar.current.date(byAdding: .day, value: offset, to: expiry),
+                  date > now else { continue }
+            results.append(NotificationCandidate(date: date, product: product, phase: 4))
+        }
+
+        // Phases 1-3 — respect reminder settings
         func add(_ offset: Int, phase: Int) {
             guard let date = Calendar.current.date(byAdding: .day, value: offset, to: expiry),
                   date > reminderStart,
                   date > now else { return }
             results.append(NotificationCandidate(date: date, product: product, phase: phase))
         }
-
-        // Phase 4 — days 7,6,4,2,1 before expiry
-        for offset in [-7, -6, -4, -2, -1] { add(offset, phase: 4) }
 
         // Phase 3 — days 14,11,8 before expiry
         for offset in [-14, -11, -8] { add(offset, phase: 3) }
@@ -213,11 +224,25 @@ final class NotificationScheduler {
     }
 
     func fireTestNotification(products: [Product]) async -> Bool {
+        // Check permission first
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        guard settings.authorizationStatus == .authorized else {
+            print("[DEBUG] fireTestNotification: permission not granted, status=\(settings.authorizationStatus.rawValue)")
+            return false
+        }
+
         let expiringSoon = products
             .filter { daysUntilExpiry(for: $0) >= 0 && daysUntilExpiry(for: $0) <= 7 }
             .sorted { $0.expiryDate < $1.expiryDate }
 
-        guard let firstProduct = expiringSoon.first else { return false }
+        print("[DEBUG] fireTestNotification: expiringSoon count=\(expiringSoon.count)")
+
+        guard let firstProduct = expiringSoon.first else {
+            print("[DEBUG] fireTestNotification: no expiring soon products")
+            return false
+        }
+
+        print("[DEBUG] fireTestNotification: scheduling for \(firstProduct.nameProduct)")
 
         let content = UNMutableNotificationContent()
         content.sound = .default
@@ -227,7 +252,7 @@ final class NotificationScheduler {
         content.userInfo["targetStatus"] = ItemStatus.danger.rawValue
         content.userInfo["targetProductID"] = firstProduct.id.uuidString
 
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.5, repeats: false)
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 3, repeats: false)
         let request = UNNotificationRequest(
             identifier: "test-\(UUID().uuidString)",
             content: content,
@@ -235,9 +260,12 @@ final class NotificationScheduler {
         )
 
         do {
+            print("[DEBUG] fireTestNotification: adding request")
             try await UNUserNotificationCenter.current().add(request)
+            print("[DEBUG] fireTestNotification: success")
             return true
         } catch {
+            print("[DEBUG] fireTestNotification: failed - \(error)")
             return false
         }
     }

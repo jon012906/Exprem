@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 struct DashboardView: View {
     @Environment(\.appTheme) private var theme
@@ -17,6 +18,7 @@ struct DashboardView: View {
     @State private var selectedFilter: FilterOption = .expiredSoon
     @State private var showScanProductName = false
     @State private var draft = ProductDraft()
+    @State private var notificationFeedback: String?
 
     private let scheduler = NotificationScheduler()
 
@@ -78,7 +80,10 @@ struct DashboardView: View {
                         Spacer()
                         Button {
                             Task {
-                                _ = await scheduler.fireTestNotification(products: products)
+                                let success = await scheduler.fireTestNotification(products: products)
+                                notificationFeedback = success ? "Notification will appear in 3 seconds" : "Failed - check permission"
+                                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                                notificationFeedback = nil
                             }
                         } label: {
                             Image(systemName: "bell.badge")
@@ -236,6 +241,14 @@ struct DashboardView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .returnToDashboard)) { _ in
                 showScanProductName = false
+            }
+            .alert("Notification Test", isPresented: Binding(
+                get: { notificationFeedback != nil },
+                set: { if !$0 { notificationFeedback = nil } }
+            )) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(notificationFeedback ?? "")
             }
         }
 
