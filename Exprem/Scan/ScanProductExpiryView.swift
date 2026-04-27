@@ -20,6 +20,8 @@ struct ScanProductExpiryView: View {
     @State private var showAddProduct = false
     @State private var showNotDetectedAlert = false
     @State private var detectedExpiry: Date? = nil
+    @State private var focusIndicatorPoint: CGPoint?
+    @State private var focusPulse: Bool = false
 
     var body: some View {
         ZStack {
@@ -28,12 +30,24 @@ struct ScanProductExpiryView: View {
                     RoundedRectangle(cornerRadius: 28, style: .continuous)
                         .fill(theme.appSurfaceMuted)
 
-                    CameraPreview(session: cameraVM.getSession())
+                    CameraPreview(session: cameraVM.getSession()) { normalizedPoint, viewPoint in
+                        cameraVM.focusAt(point: normalizedPoint)
+                        focusIndicatorPoint = viewPoint
+                        focusPulse = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+                            focusIndicatorPoint = nil
+                        }
+                    }
                         .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                         .contentShape(Rectangle())
-                        .onTapGesture { location in
-                            cameraVM.focusAt(point: location)
-                        }
+
+                    livePreviewOverlay
+
+                    if let point = focusIndicatorPoint {
+                        focusIndicator(at: point)
+                    }
+
+                    scanMaskOverlay
 
                     scanBorderOverlay
 
@@ -45,7 +59,8 @@ struct ScanProductExpiryView: View {
                         processingOverlay
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity)
+                .frame(height: min(UIScreen.main.bounds.height * 0.56, 420))
 
                 Button {
                     showManualExpiry = true
@@ -79,6 +94,12 @@ struct ScanProductExpiryView: View {
         }
         .onDisappear {
             cameraVM.stop()
+        }
+        .onChange(of: cameraVM.livePreviewText) { _ in
+            guard focusIndicatorPoint != nil else { return }
+            withAnimation(.easeOut(duration: 0.18)) {
+                focusPulse.toggle()
+            }
         }
         .onChange(of: cameraVM.isCaptured) { isCaptured in
             guard isCaptured else { return }
@@ -171,14 +192,71 @@ struct ScanProductExpiryView: View {
     }
 
     private var scanBorderOverlay: some View {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .stroke(theme.appBlue.opacity(0.95), lineWidth: 5)
-            .frame(width: 220, height: 220)
+        GeometryReader { proxy in
+            let rect = ScanRegion.rect(in: proxy.size)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(theme.appBlue.opacity(0.95), lineWidth: 5)
+                .frame(width: rect.width, height: rect.height)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(.white.opacity(0.45), lineWidth: 1)
+                        .padding(8)
+                }
+                .position(x: rect.midX, y: rect.midY)
+        }
+        .allowsHitTesting(false)
+    }
+
+    private var scanMaskOverlay: some View {
+        GeometryReader { proxy in
+            let rect = ScanRegion.rect(in: proxy.size)
+            Path { path in
+                path.addRect(CGRect(origin: .zero, size: proxy.size))
+                path.addRoundedRect(in: rect, cornerSize: CGSize(width: 18, height: 18))
+            }
+            .fill(.black.opacity(0.23), style: FillStyle(eoFill: true))
+        }
+        .allowsHitTesting(false)
+    }
+
+    private var livePreviewOverlay: some View {
+        VStack {
+            if !cameraVM.livePreviewText.isEmpty {
+                Text(cameraVM.livePreviewText)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(theme.appTextPrimary)
+                    .lineLimit(2)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 12)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(theme.appBorder.opacity(0.85), lineWidth: 0.8)
+                    }
+                    .padding(.top, 14)
+                    .padding(.horizontal, 16)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+            Spacer()
+        }
+        .animation(.easeInOut(duration: 0.22), value: cameraVM.livePreviewText)
+    }
+
+    private func focusIndicator(at point: CGPoint) -> some View {
+        Circle()
+            .stroke(theme.appBlue.opacity(0.95), lineWidth: 2.2)
+            .frame(width: 72, height: 72)
             .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(.white.opacity(0.45), lineWidth: 1)
+                Circle()
+                    .stroke(.white.opacity(0.6), lineWidth: 1)
                     .padding(8)
             }
+            .scaleEffect(focusPulse ? 1 : 0.82)
+            .opacity(focusPulse ? 0.2 : 1)
+            .position(point)
+            .allowsHitTesting(false)
+            .animation(.easeOut(duration: 0.55), value: focusPulse)
     }
 
     private var permissionOverlay: some View {

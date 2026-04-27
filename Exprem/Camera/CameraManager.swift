@@ -7,17 +7,24 @@
 
 import AVFoundation
 import UIKit
+import Vision
 
-final class CameraManager {
+final class CameraManager: NSObject {
     let session = AVCaptureSession()
     private let photoOutput = AVCapturePhotoOutput()
+    private let videoOutput = AVCaptureVideoDataOutput()
     private let sessionQueue = DispatchQueue(label: "camera.session.queue")
     /// retain delegates to prevent them from being deallocated before the capture process completes
     private var inFlightDelegates: [Int64: PhotoCaptureDelegate] = [:]
     
     private var isConfigured = false
+    private var isPerformingLiveOCR = false
+    private var hasUserFocused = false
+    private var lastLiveOCRTime: CFAbsoluteTime = 0
+    private let liveOCRInterval: CFAbsoluteTime = 0.35
     
     var onPhotoCaptured: ((UIImage) -> Void)?
+    var onLiveTextPreview: ((String) -> Void)?
     
     func configure() {
         sessionQueue.async {
@@ -46,6 +53,22 @@ final class CameraManager {
             }
             
             self.session.addOutput(self.photoOutput)
+
+            guard self.session.canAddOutput(self.videoOutput) else {
+                print("Video output setup failed")
+                return
+            }
+
+            self.videoOutput.alwaysDiscardsLateVideoFrames = true
+            self.videoOutput.videoSettings = [
+                kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA
+            ]
+            self.videoOutput.setSampleBufferDelegate(self, queue: self.sessionQueue)
+            self.session.addOutput(self.videoOutput)
+
+            if let connection = self.videoOutput.connection(with: .video), connection.isVideoOrientationSupported {
+                connection.videoOrientation = .portrait
+            }
             
             self.isConfigured = true
         }
@@ -63,6 +86,11 @@ final class CameraManager {
         sessionQueue.async {
             if self.session.isRunning {
                 self.session.stopRunning()
+            }
+            self.isPerformingLiveOCR = false
+            self.hasUserFocused = false
+            DispatchQueue.main.async {
+                self.onLiveTextPreview?("")
             }
         }
     }
@@ -100,6 +128,7 @@ final class CameraManager {
         guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else { return }
 
         sessionQueue.async {
+            self.hasUserFocused = true
             do {
                 try device.lockForConfiguration()
 
@@ -119,5 +148,67 @@ final class CameraManager {
             }
         }
     }
+
+    private func recognizeTopText(in pixelBuffer: CVPixelBuffer, regionOfInterest: CGRect) -> String {
+        let visionROI = CGRect(
+            x: regionOfInterest.origin.x,
+            y: 1 - regionOfInterest.origin.y - regionOfInterest.height,
+            width: regionOfInterest.width,
+            height: regionOfInterest.height
+        )
+
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .fast
+        request.usesLanguageCorrection = false
+        request.recognitionLanguages = ["id-ID", "en-US"]
+        request.regionOfInterest = visionROI
+
+        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .right, options: [:])
+
+        do {
+            try handler.perform([request])
+            let observations = request.results ?? []
+            let candidates = observations.compactMap { observation -> (text: String, confidence: Float)? in
+                guard let top = observation.topCandidates(1).first else { return nil }
+                let cleaned = top.string.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard cleaned.count >= 2 else { return nil }
+                return (cleaned, top.confidence)
+            }
+
+            return candidates
+                .sorted { $0.confidence > $1.confidence }
+                .first?
+                .text ?? ""
+        } catch {
+            return ""
+        }
+    }
     
+}
+
+extension CameraManager: AVCaptureVideoDataOutputSampleBufferDelegate {
+    func captureOutput(
+        _ output: AVCaptureOutput,
+        didOutput sampleBuffer: CMSampleBuffer,
+        from connection: AVCaptureConnection
+    ) {
+        guard output === videoOutput else { return }
+        guard session.isRunning else { return }
+        guard hasUserFocused else { return }
+        guard !isPerformingLiveOCR else { return }
+
+        let now = CFAbsoluteTimeGetCurrent()
+        guard now - lastLiveOCRTime >= liveOCRInterval else { return }
+        lastLiveOCRTime = now
+
+        guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+
+        isPerformingLiveOCR = true
+        let text = recognizeTopText(in: pixelBuffer, regionOfInterest: ScanRegion.normalizedRect)
+        isPerformingLiveOCR = false
+
+        DispatchQueue.main.async {
+            self.onLiveTextPreview?(text)
+        }
+    }
 }
