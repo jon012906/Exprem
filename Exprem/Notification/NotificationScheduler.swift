@@ -158,36 +158,36 @@ final class NotificationScheduler {
         case 4:
             if productCount == 1, let primaryProduct {
                 titleBody = (
-                    "Expiring Soon!",
-                    "\(primaryProduct.nameProduct) will be expired. Check it now!"
+                    "\(primaryProduct.nameProduct.uppercased()) will Expire Soon!",
+                    "Check it now!"
                 )
             } else {
                 titleBody = (
-                    "Expiring Soon!",
-                    "There are \(productCount) products will be expired. Check it now!"
+                    "\(productCount) items will expire soon",
+                    "Check it now!"
                 )
             }
         case 3:
             if productCount == 1, let primaryProduct {
                 titleBody = (
-                    "Expiring Soon!",
-                    "\(primaryProduct.nameProduct) will be expired. Check it now!"
+                    "\(primaryProduct.nameProduct.uppercased()) will Expire Soon!",
+                    "Check it now!"
                 )
             } else {
                 titleBody = (
-                    "Expiring Soon!",
-                    "There are \(productCount) products will be expired. Check it now!"
+                    "\(productCount) items will expire soon",
+                    "Check it now!"
                 )
             }
         case 2:
             titleBody = (
-                "Expiring Soon!",
-                "There are \(productCount) products will be expired. Check it now!"
+                "\(productCount) items will expire soon",
+                "Check it now!"
             )
         default:
             titleBody = (
-                "Expiring Soon!",
-                "There are \(productCount) products will be expired. Check it now!"
+                "\(productCount) items will expire soon",
+                "Check it now!"
             )
         }
 
@@ -210,5 +210,39 @@ final class NotificationScheduler {
         let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
 
         UNUserNotificationCenter.current().add(request)
+    }
+
+    func fireTestNotification(products: [Product]) async -> Bool {
+        let expiringSoon = products
+            .filter { daysUntilExpiry(for: $0) >= 0 && daysUntilExpiry(for: $0) <= 7 }
+            .sorted { $0.expiryDate < $1.expiryDate }
+
+        guard let firstProduct = expiringSoon.first else { return false }
+
+        let content = UNMutableNotificationContent()
+        content.sound = .default
+        content.threadIdentifier = "expiry"
+        content.title = "Expiring Soon!"
+        content.body = "\(firstProduct.nameProduct) will be expired. Check it now!"
+        content.userInfo["targetStatus"] = ItemStatus.danger.rawValue
+        content.userInfo["targetProductID"] = firstProduct.id.uuidString
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1.5, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "test-\(UUID().uuidString)",
+            content: content,
+            trigger: trigger
+        )
+
+        do {
+            try await UNUserNotificationCenter.current().add(request)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    private func daysUntilExpiry(for product: Product) -> Int {
+        Calendar.current.dateComponents([.day], from: Date(), to: product.expiryDate).day ?? 0
     }
 }
